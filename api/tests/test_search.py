@@ -386,9 +386,9 @@ class TestComprehensiveSearch:
 
         for test_case in test_cases:
             query = str(test_case["query"])
-            limit = int(test_case["limit"])  # type: ignore
-            score_cutoff = float(test_case["score_cutoff"])  # type: ignore
-            
+            limit: int = test_case["limit"]  # type: ignore[assignment]
+            score_cutoff: float = test_case["score_cutoff"]  # type: ignore[assignment]
+
             expected_results = fuzzy_search_items(query, limit, score_cutoff)
             params: dict[str, str | int | float] = {"query": query, "limit": limit, "score_cutoff": score_cutoff}
             response = client.get("/search/items", params=params)
