@@ -4,9 +4,27 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "fastapi[standard]>=0.116.1",
+    "rapidfuzz>=3.0.0",
+    "httpx>=0.28.1",
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
 
 [dependency-groups]
 dev = [
     "ipython>=9.4.0",
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
 ]
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["D", "T201", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
