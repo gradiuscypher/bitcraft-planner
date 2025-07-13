@@ -2,6 +2,8 @@
 Crafting planner for Bitcraft Online
 
 # Working on
+- Build the model methods that create our lookup dictionaies and then refactor API to return those objects
+- Create proper Pydantic API response objects
 - Get the skill names from JSON as well so that we can present them in the recipes
 - SQLA implementation, example alembic setup - basic models for recipe sharing
 - Group crafting planner, allow there to be an owner link and viewer links
@@ -10,7 +12,6 @@ Crafting planner for Bitcraft Online
 
 # Backlog Sorted
 - Split files for API endpoints
-- Create proper Pydantic API response objects
 
 # Backlog Unsorted
 - Explorer for other JSON data in the game files?

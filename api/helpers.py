@@ -5,6 +5,7 @@ from rapidfuzz import fuzz, process
 
 BITCRAFT_GAMEDATA_DIR = "/Users/gradius/git/BitCraft_GameData/server/region"
 BUILDING_RECIPES_FILE = f"{BITCRAFT_GAMEDATA_DIR}/construction_recipe_desc.json"
+BUILDING_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/building_desc.json"
 CRAFTING_RECIPES_FILE = f"{BITCRAFT_GAMEDATA_DIR}/crafting_recipe_desc.json"
 CARGO_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/cargo_desc.json"
 ITEM_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/item_desc.json"
@@ -18,8 +19,17 @@ def load_building_recipes() -> tuple[dict[str, Any], dict[int, Any]]:
         building_recipes = json.load(f)
         for b in building_recipes:
             buildings_by_name[b["name"]] = b
-            buildings_by_id[b["id"]] = b
+            buildings_by_id[b["building_description_id"]] = b
         return buildings_by_name, buildings_by_id
+
+
+def load_building_descriptions() -> dict[int, Any]:
+    building_by_id: dict[int, Any] = {}
+    with open(BUILDING_DESCRIPTIONS_FILE) as f:
+        building_descriptions = json.load(f)
+        for b in building_descriptions:
+            building_by_id[b["id"]] = b
+        return building_by_id
 
 
 def load_cargo_descriptions() -> tuple[dict[str, Any], dict[int, Any]]:
@@ -32,6 +42,22 @@ def load_cargo_descriptions() -> tuple[dict[str, Any], dict[int, Any]]:
             cargo_by_name[cargo_obj["name"]] = cargo_obj
             cargo_by_id[cargo_obj["id"]] = cargo_obj
     return cargo_by_name, cargo_by_id
+
+
+def load_item_recipes() -> dict[int, Any]:
+    """
+    Note: these are also valid for cargo recipes.
+    """
+    item_recipes: dict[int, Any] = {}
+    with open(CRAFTING_RECIPES_FILE) as f:
+        crafting_recipes = json.load(f)
+        for recipe in crafting_recipes:
+            crafted_item_stacks = recipe["crafted_item_stacks"]
+            if crafted_item_stacks:
+                for crafted_item in crafted_item_stacks:
+                    crafted_id = crafted_item[0]
+                    item_recipes[crafted_id] = recipe
+    return item_recipes
 
 
 def load_item_descriptions() -> tuple[dict[str, Any], dict[int, Any]]:
@@ -67,20 +93,6 @@ def calculate_building_needs(building_name: str) -> None:
         stack_count = cargo_stack[1]
         stack_name = cargo_by_name[stack_id]["name"]
         print(f"{stack_name}: {stack_count}")
-
-
-def get_item_recipe_json() -> dict[int, Any]:
-    item_recipes: dict[int, Any] = {}
-    with open(CRAFTING_RECIPES_FILE) as f:
-        crafting_recipes = json.load(f)
-        for recipe in crafting_recipes:
-            crafted_item_stacks = recipe["crafted_item_stacks"]
-            if crafted_item_stacks:
-                for crafted_item in crafted_item_stacks:
-                    crafted_id = crafted_item[0]
-                    item_recipes[crafted_id] = recipe
-    return item_recipes
-
 
 
 def fuzzy_search_items(query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[tuple[str, float, int]]:
