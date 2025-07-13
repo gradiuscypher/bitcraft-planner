@@ -1,0 +1,26 @@
+---
+description: High level project rules that apply to all files and code modification
+alwaysApply: true
+---
+# Project Highlights
+This project uses the following tech stack, please use best practices when implementing any requested features:
+- Vite
+- React
+- Typescript
+- shadcn UI - https://ui.shadcn.com/docs/components
+- FastAPI (python)
+- SQLAlchemy using SQLite3
+- Alembic for database migrations
+
+# Things you must do
+- Validate your changes with linters and tests where available
+- Ensure that all UI elements text match the light and dark themes
+
+# Things you may do
+- You may install new Shadcn components
+- You may install new python libraries if needed
+- You may install new npm packages if needed
+
+# Things you must not do
+- Do not try to run the project API or webserver. Validate your API changes via linters and testing.
+- Do not include unneeded blank spaces in lines. If a line is intended to be a new line, there should be no additional space or tab characters in that line.

@@ -62,7 +62,7 @@ class TestItemSearch:
             expected_name, expected_score, expected_id = expected_results[i]
             assert result["name"] == expected_name
             assert result["score"] == expected_score
-            assert result["id"] == str(expected_id)
+            assert result["id"] == expected_id
             assert result["type"] == "item"
 
     def test_search_items_with_params(self, client: TestClient) -> None:
@@ -86,7 +86,7 @@ class TestItemSearch:
             expected_name, expected_score, expected_id = expected_results[i]
             assert result["name"] == expected_name
             assert result["score"] == expected_score
-            assert result["id"] == str(expected_id)
+            assert result["id"] == expected_id
             assert result["score"] >= score_cutoff
 
     def test_search_items_no_results(self, client: TestClient) -> None:
@@ -126,7 +126,7 @@ class TestBuildingSearch:
             expected_name, expected_score, expected_id = expected_results[i]
             assert result["name"] == expected_name
             assert result["score"] == expected_score
-            assert result["id"] == str(expected_id)
+            assert result["id"] == expected_id
             assert result["type"] == "building"
 
     def test_search_buildings_with_params(self, client: TestClient) -> None:
@@ -171,7 +171,7 @@ class TestCargoSearch:
             expected_name, expected_score, expected_id = expected_results[i]
             assert result["name"] == expected_name
             assert result["score"] == expected_score
-            assert result["id"] == str(expected_id)
+            assert result["id"] == expected_id
             assert result["type"] == "cargo"
 
     def test_search_cargo_with_params(self, client: TestClient) -> None:
@@ -222,7 +222,7 @@ class TestSearchAll:
                 expected_name, expected_score, expected_id = expected_category_results[i]
                 assert result["name"] == expected_name
                 assert result["score"] == expected_score
-                assert result["id"] == str(expected_id)
+                assert result["id"] == expected_id
                 assert result["type"] == category.rstrip("s")  # Remove 's' to match singular form
 
     def test_search_all_with_params(self, client: TestClient) -> None:
@@ -248,7 +248,7 @@ class TestSearchAll:
                 expected_name, expected_score, expected_id = expected_category_results[i]
                 assert result["name"] == expected_name
                 assert result["score"] == expected_score
-                assert result["id"] == str(expected_id)
+                assert result["id"] == expected_id
                 assert result["score"] >= score_cutoff
 
 
@@ -270,7 +270,7 @@ class TestBestMatch:
             assert data is not None
             assert data["name"] == expected_name
             assert data["score"] == expected_score
-            assert data["id"] == str(expected_id)
+            assert data["id"] == expected_id
             assert data["type"] == expected_type
         else:
             assert data is None
@@ -292,7 +292,7 @@ class TestBestMatch:
             assert data is not None
             assert data["name"] == expected_name
             assert data["score"] == expected_score
-            assert data["id"] == str(expected_id)
+            assert data["id"] == expected_id
             assert data["type"] == expected_type
         else:
             assert data is None
@@ -320,7 +320,7 @@ class TestBestMatch:
             assert data is not None
             assert data["name"] == expected_name
             assert data["score"] == expected_score
-            assert data["id"] == str(expected_id)
+            assert data["id"] == expected_id
             assert data["type"] == expected_type
         else:
             assert data is None
@@ -404,7 +404,7 @@ class TestComprehensiveSearch:
                 expected_name, expected_score, expected_id = expected_results[i]
                 assert result["name"] == expected_name
                 assert result["score"] == expected_score
-                assert result["id"] == str(expected_id)
+                assert result["id"] == expected_id
                 assert result["score"] >= score_cutoff
 
 
@@ -457,7 +457,7 @@ class TestDataConsistency:
                 expected_name, expected_score, expected_id = expected_results[i]
                 assert result["name"] == expected_name
                 assert result["score"] == expected_score
-                assert result["id"] == str(expected_id)
+                assert result["id"] == expected_id
 
     def test_buildings_consistency(self, client: TestClient) -> None:
         """Test that buildings endpoint returns exactly what the helper function returns."""
@@ -475,7 +475,7 @@ class TestDataConsistency:
                 expected_name, expected_score, expected_id = expected_results[i]
                 assert result["name"] == expected_name
                 assert result["score"] == expected_score
-                assert result["id"] == str(expected_id)
+                assert result["id"] == expected_id
 
     def test_cargo_consistency(self, client: TestClient) -> None:
         """Test that cargo endpoint returns exactly what the helper function returns."""
@@ -493,7 +493,7 @@ class TestDataConsistency:
                 expected_name, expected_score, expected_id = expected_results[i]
                 assert result["name"] == expected_name
                 assert result["score"] == expected_score
-                assert result["id"] == str(expected_id)
+                assert result["id"] == expected_id
 
     def test_best_match_consistency(self, client: TestClient) -> None:
         """Test that best match endpoint returns exactly what the helper function returns."""
@@ -511,7 +511,7 @@ class TestDataConsistency:
                 assert data is not None
                 assert data["name"] == expected_name
                 assert data["score"] == expected_score
-                assert data["id"] == str(expected_id)
+                assert data["id"] == expected_id
                 assert data["type"] == expected_type
             else:
                 assert data is None

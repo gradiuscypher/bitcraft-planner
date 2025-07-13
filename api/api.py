@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import Any
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from helpers import (
@@ -9,14 +10,34 @@ from helpers import (
     fuzzy_search_cargo,
     fuzzy_search_items,
     get_best_match,
+    load_building_recipes,
+    load_cargo_descriptions,
+    load_item_descriptions,
 )
 
+items_by_name, items_by_id = load_item_descriptions()
+buildings_by_name, buildings_by_id = load_building_recipes()
+cargo_by_name, cargo_by_id = load_cargo_descriptions()
+
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:3000",  # Alternative React dev server
+        "http://127.0.0.1:5173",  # Alternative localhost format
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
 
 class SearchResult(BaseModel):
     name: str
     score: float
-    id: str
+    id: int
     type: str | None = None
 
 class SearchResponse(BaseModel):
@@ -28,12 +49,31 @@ class SearchResponse(BaseModel):
 async def root() -> dict[str, str]:
     return {"message": "BitCraft Planner API"}
 
+
+@app.get("/item/{item_id}")
+async def get_item(item_id: int) -> dict[str, Any]:
+    """Get item by ID"""
+    return items_by_id[item_id]
+
+
+@app.get("/building/{building_id}")
+async def get_building(building_id: int) -> dict[str, Any]:
+    """Get building by ID"""
+    return buildings_by_id[building_id]
+
+
+@app.get("/cargo/{cargo_id}")
+async def get_cargo(cargo_id: int) -> dict[str, Any]:
+    """Get cargo by ID"""
+    return cargo_by_id[cargo_id]
+
+
 @app.get("/search/items")
 async def search_items(query: str, limit: int = 5, score_cutoff: float = 60.0) -> SearchResponse:
     """Search for items using fuzzy matching"""
     results = fuzzy_search_items(query, limit, score_cutoff)
     return SearchResponse(
-        results=[SearchResult(name=name, score=score, id=str(item_id), type="item") for name, score, item_id in results],
+        results=[SearchResult(name=name, score=score, id=item_id, type="item") for name, score, item_id in results],
         query=query,
         search_type="items",
     )
@@ -43,7 +83,7 @@ async def search_buildings(query: str, limit: int = 5, score_cutoff: float = 60.
     """Search for buildings using fuzzy matching"""
     results = fuzzy_search_buildings(query, limit, score_cutoff)
     return SearchResponse(
-        results=[SearchResult(name=name, score=score, id=str(building_id), type="building") for name, score, building_id in results],
+        results=[SearchResult(name=name, score=score, id=building_id, type="building") for name, score, building_id in results],
         query=query,
         search_type="buildings",
     )
@@ -53,7 +93,7 @@ async def search_cargo(query: str, limit: int = 5, score_cutoff: float = 60.0) -
     """Search for cargo using fuzzy matching"""
     results = fuzzy_search_cargo(query, limit, score_cutoff)
     return SearchResponse(
-        results=[SearchResult(name=name, score=score, id=str(cargo_id), type="cargo") for name, score, cargo_id in results],
+        results=[SearchResult(name=name, score=score, id=cargo_id, type="cargo") for name, score, cargo_id in results],
         query=query,
         search_type="cargo",
     )
@@ -64,9 +104,9 @@ async def search_all(query: str, limit: int = 5, score_cutoff: float = 60.0) -> 
     results = fuzzy_search_all(query, limit, score_cutoff)
     return {
         "query": query,
-        "items": [SearchResult(name=name, score=score, id=str(item_id), type="item") for name, score, item_id in results["items"]],
-        "buildings": [SearchResult(name=name, score=score, id=str(building_id), type="building") for name, score, building_id in results["buildings"]],
-        "cargo": [SearchResult(name=name, score=score, id=str(cargo_id), type="cargo") for name, score, cargo_id in results["cargo"]],
+        "items": [SearchResult(name=name, score=score, id=item_id, type="item") for name, score, item_id in results["items"]],
+        "buildings": [SearchResult(name=name, score=score, id=building_id, type="building") for name, score, building_id in results["buildings"]],
+        "cargo": [SearchResult(name=name, score=score, id=cargo_id, type="cargo") for name, score, cargo_id in results["cargo"]],
     }
 
 @app.get("/search/best")
@@ -78,7 +118,7 @@ async def get_best_match_endpoint(query: str, search_type: str = "all") -> Searc
     result = get_best_match(query, search_type)
     if result:
         name, score, item_id, match_type = result
-        return SearchResult(name=name, score=score, id=str(item_id), type=match_type)
+        return SearchResult(name=name, score=score, id=item_id, type=match_type)
     return None
 
 if __name__ == "__main__":

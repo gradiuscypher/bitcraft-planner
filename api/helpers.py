@@ -8,9 +8,9 @@ BUILDING_RECIPES_FILE = f"{BITCRAFT_GAMEDATA_DIR}/construction_recipe_desc.json"
 CARGO_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/cargo_desc.json"
 ITEM_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/item_desc.json"
 
-def load_building_recipes() -> tuple[dict[str, Any], dict[str, Any]]:
-    buildings_by_name = {}
-    buildings_by_id = {}
+def load_building_recipes() -> tuple[dict[str, Any], dict[int, Any]]:
+    buildings_by_name: dict[str, Any] = {}
+    buildings_by_id: dict[int, Any] = {}
 
     with open(BUILDING_RECIPES_FILE) as f:
         building_recipes = json.load(f)
@@ -20,28 +20,34 @@ def load_building_recipes() -> tuple[dict[str, Any], dict[str, Any]]:
         return buildings_by_name, buildings_by_id
 
 
-def load_cargo_descriptions() -> dict[str, Any]:
-    cargo_descriptions = {}
+def load_cargo_descriptions() -> tuple[dict[str, Any], dict[int, Any]]:
+    cargo_by_name: dict[str, Any] = {}
+    cargo_by_id: dict[int, Any] = {}
+
     with open(CARGO_DESCRIPTIONS_FILE) as f:
         cargo_json = json.load(f)
         for cargo_obj in cargo_json:
-            cargo_descriptions[cargo_obj["id"]] = cargo_obj
-    return cargo_descriptions
+            cargo_by_name[cargo_obj["name"]] = cargo_obj
+            cargo_by_id[cargo_obj["id"]] = cargo_obj
+    return cargo_by_name, cargo_by_id
 
 
-def load_item_descriptions() -> dict[str, Any]:
-    item_descriptions = {}
+def load_item_descriptions() -> tuple[dict[str, Any], dict[int, Any]]:
+    item_by_name: dict[str, Any] = {}
+    item_by_id: dict[int, Any] = {}
     with open(ITEM_DESCRIPTIONS_FILE) as f:
         item_json = json.load(f)
         for item_obj in item_json:
-            item_descriptions[item_obj["id"]] = item_obj
-    return item_descriptions
+            item_by_name[item_obj["name"]] = item_obj
+            item_by_id[item_obj["id"]] = item_obj
+
+    return item_by_name, item_by_id
 
 
-def calculate_building_needs(building_name: str):
+def calculate_building_needs(building_name: str) -> None:
     building_recipes, _ = load_building_recipes()
-    cargo_descriptions = load_cargo_descriptions()
-    item_descriptions = load_item_descriptions()
+    cargo_by_name, _ = load_cargo_descriptions()
+    item_by_name, _ = load_item_descriptions()
 
     building_recipes = building_recipes[building_name]
     item_stacks = building_recipes["consumed_item_stacks"]
@@ -50,18 +56,18 @@ def calculate_building_needs(building_name: str):
     for item_stack in item_stacks:
         stack_id = item_stack[0]
         stack_count = item_stack[1]
-        stack_name = item_descriptions[stack_id]["name"]
+        stack_name = item_by_name[stack_id]["name"]
         print(f"{stack_name}: {stack_count}")
 
     print(f"Cargo needs for {building_name}:")
     for cargo_stack in cargo_stacks:
         stack_id = cargo_stack[0]
         stack_count = cargo_stack[1]
-        stack_name = cargo_descriptions[stack_id]["name"]
+        stack_name = cargo_by_name[stack_id]["name"]
         print(f"{stack_name}: {stack_count}")
 
 
-def fuzzy_search_items(query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[tuple[str, float, str]]:
+def fuzzy_search_items(query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[tuple[str, float, int]]:
     """
     Perform fuzzy search on item names.
     Args:
@@ -71,10 +77,10 @@ def fuzzy_search_items(query: str, limit: int = 5, score_cutoff: float = 60.0) -
     Returns:
         List of tuples: (item_name, similarity_score, item_id)
     """
-    item_descriptions = load_item_descriptions()
+    item_by_name, item_by_id = load_item_descriptions()
 
     # Create a mapping of item names to their IDs
-    item_names = {item_data["name"]: item_id for item_id, item_data in item_descriptions.items()}
+    item_names = {item_data["name"]: item_id for item_id, item_data in item_by_id.items()}
 
     # Perform fuzzy matching
     results = process.extract(
@@ -89,7 +95,7 @@ def fuzzy_search_items(query: str, limit: int = 5, score_cutoff: float = 60.0) -
     return [(name, score, item_names[name]) for name, score, _ in results]
 
 
-def fuzzy_search_buildings(query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[tuple[str, float, str]]:
+def fuzzy_search_buildings(query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[tuple[str, float, int]]:
     """
     Perform fuzzy search on building names.
     Args:
@@ -117,7 +123,7 @@ def fuzzy_search_buildings(query: str, limit: int = 5, score_cutoff: float = 60.
     return [(name, score, building_names[name]) for name, score, _ in results]
 
 
-def fuzzy_search_cargo(query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[tuple[str, float, str]]:
+def fuzzy_search_cargo(query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[tuple[str, float, int]]:
     """
     Perform fuzzy search on cargo names.
     Args:
@@ -127,10 +133,10 @@ def fuzzy_search_cargo(query: str, limit: int = 5, score_cutoff: float = 60.0) -
     Returns:
         List of tuples: (cargo_name, similarity_score, cargo_id)
     """
-    cargo_descriptions = load_cargo_descriptions()
+    cargo_by_name, cargo_by_id = load_cargo_descriptions()
 
     # Create a mapping of cargo names to their IDs
-    cargo_names = {cargo_data["name"]: cargo_id for cargo_id, cargo_data in cargo_descriptions.items()}
+    cargo_names = {cargo_data["name"]: cargo_id for cargo_id, cargo_data in cargo_by_id.items()}
 
     # Perform fuzzy matching
     results = process.extract(
@@ -145,7 +151,7 @@ def fuzzy_search_cargo(query: str, limit: int = 5, score_cutoff: float = 60.0) -
     return [(name, score, cargo_names[name]) for name, score, _ in results]
 
 
-def fuzzy_search_all(query: str, limit: int = 5, score_cutoff: float = 60.0) -> dict[str, list[tuple[str, float, str]]]:
+def fuzzy_search_all(query: str, limit: int = 5, score_cutoff: float = 60.0) -> dict[str, list[tuple[str, float, int]]]:
     """
     Perform fuzzy search across all categories (items, buildings, cargo).
     Args:
@@ -162,7 +168,7 @@ def fuzzy_search_all(query: str, limit: int = 5, score_cutoff: float = 60.0) -> 
     }
 
 
-def get_best_match(query: str, search_type: str = "all") -> tuple[str, float, str, str] | None:
+def get_best_match(query: str, search_type: str = "all") -> tuple[str, float, int, str] | None:
     """
     Get the single best match across specified search type.
     Args:
