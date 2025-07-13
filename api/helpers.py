@@ -5,8 +5,10 @@ from rapidfuzz import fuzz, process
 
 BITCRAFT_GAMEDATA_DIR = "/Users/gradius/git/BitCraft_GameData/server/region"
 BUILDING_RECIPES_FILE = f"{BITCRAFT_GAMEDATA_DIR}/construction_recipe_desc.json"
+CRAFTING_RECIPES_FILE = f"{BITCRAFT_GAMEDATA_DIR}/crafting_recipe_desc.json"
 CARGO_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/cargo_desc.json"
 ITEM_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/item_desc.json"
+
 
 def load_building_recipes() -> tuple[dict[str, Any], dict[int, Any]]:
     buildings_by_name: dict[str, Any] = {}
@@ -67,6 +69,20 @@ def calculate_building_needs(building_name: str) -> None:
         print(f"{stack_name}: {stack_count}")
 
 
+def get_item_recipe_json() -> dict[int, Any]:
+    item_recipes: dict[int, Any] = {}
+    with open(CRAFTING_RECIPES_FILE) as f:
+        crafting_recipes = json.load(f)
+        for recipe in crafting_recipes:
+            crafted_item_stacks = recipe["crafted_item_stacks"]
+            if crafted_item_stacks:
+                for crafted_item in crafted_item_stacks:
+                    crafted_id = crafted_item[0]
+                    item_recipes[crafted_id] = recipe
+    return item_recipes
+
+
+
 def fuzzy_search_items(query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[tuple[str, float, int]]:
     """
     Perform fuzzy search on item names.
@@ -98,7 +114,7 @@ def fuzzy_search_items(query: str, limit: int = 5, score_cutoff: float = 60.0) -
 def fuzzy_search_buildings(query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[tuple[str, float, int]]:
     """
     Perform fuzzy search on building names.
-    Args:
+    Args_:
         query: Search query string
         limit: Maximum number of results to return
         score_cutoff: Minimum similarity score (0-100)
