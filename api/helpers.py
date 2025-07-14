@@ -5,10 +5,12 @@ from rapidfuzz import fuzz, process
 
 BITCRAFT_GAMEDATA_DIR = "/Users/gradius/git/BitCraft_GameData/server/region"
 BUILDING_RECIPES_FILE = f"{BITCRAFT_GAMEDATA_DIR}/construction_recipe_desc.json"
-BUILDING_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/building_desc.json"
+BUILDING_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/building_type_desc.json"
 CRAFTING_RECIPES_FILE = f"{BITCRAFT_GAMEDATA_DIR}/crafting_recipe_desc.json"
 CARGO_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/cargo_desc.json"
 ITEM_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/item_desc.json"
+TOOL_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/tool_type_desc.json"
+SKILL_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/skill_desc.json"
 
 
 def load_building_recipes() -> tuple[dict[str, Any], dict[int, Any]]:
@@ -70,6 +72,23 @@ def load_item_descriptions() -> tuple[dict[str, Any], dict[int, Any]]:
             item_by_id[item_obj["id"]] = item_obj
 
     return item_by_name, item_by_id
+
+
+def load_skill_descriptions() -> dict[int, Any]:
+    skill_by_id: dict[int, Any] = {}
+    with open(SKILL_DESCRIPTIONS_FILE) as f:
+        skill_json = json.load(f)
+        for skill_obj in skill_json:
+            skill_by_id[skill_obj["id"]] = skill_obj
+    return skill_by_id
+
+def load_tool_descriptions() -> dict[int, Any]:
+    tool_by_id: dict[int, Any] = {}
+    with open(TOOL_DESCRIPTIONS_FILE) as f:
+        tool_json = json.load(f)
+        for tool_obj in tool_json:
+            tool_by_id[tool_obj["id"]] = tool_obj
+    return tool_by_id
 
 
 def calculate_building_needs(building_name: str) -> None:

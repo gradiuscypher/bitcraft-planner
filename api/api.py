@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -14,10 +15,17 @@ from helpers import (
     load_cargo_descriptions,
     load_item_descriptions,
 )
+from models import Item
+
+logger = logging.getLogger(__name__)
 
 items_by_name, items_by_id = load_item_descriptions()
 buildings_by_name, buildings_by_id = load_building_recipes()
 cargo_by_name, cargo_by_id = load_cargo_descriptions()
+
+logger.info("Loading items...")
+all_items = Item.all_items()
+logger.info("Items loaded")
 
 app = FastAPI()
 
@@ -45,15 +53,18 @@ class SearchResponse(BaseModel):
     query: str
     search_type: str
 
+
 @app.get("/")
 async def root() -> dict[str, str]:
     return {"message": "BitCraft Planner API"}
 
 
 @app.get("/item/{item_id}")
-async def get_item(item_id: int) -> dict[str, Any]:
+async def get_item(item_id: int) -> Item:
     """Get item by ID"""
-    return items_by_id[item_id]
+    if item_id not in all_items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return all_items[item_id]
 
 
 @app.get("/building/{building_id}")
@@ -62,10 +73,12 @@ async def get_building(building_id: int) -> dict[str, Any]:
     return buildings_by_id[building_id]
 
 
-@app.get("/cargo/{cargo_id}")
-async def get_cargo(cargo_id: int) -> dict[str, Any]:
+@app.get("/cargo/{item_id}")
+async def get_cargo(item_id: int) -> Item:
     """Get cargo by ID"""
-    return cargo_by_id[cargo_id]
+    if item_id not in all_items:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return all_items[item_id]
 
 
 @app.get("/search/items")
