@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from helpers import (
     load_building_descriptions,
+    load_cargo_descriptions,
     load_item_descriptions,
     load_item_recipes,
     load_skill_descriptions,
@@ -445,8 +446,37 @@ class Cargo(BaseModel):
     tag: str
     rarity: list[Any]
     not_pickupable: bool
-    recipe: ItemRecipe
+    recipe: ItemRecipe | None = None
 
-    @classmethod
-    def cargo_lookup(cls) -> dict[int, "Cargo"]:
-        return {}
+    @staticmethod
+    def all_cargo() -> dict[int, "Cargo"]:
+        cargo_results = {}
+        cargo_by_name, cargo_by_id = load_cargo_descriptions()
+        for cargo_id, cargo in cargo_by_id.items():
+            cargo_results[cargo_id] = Cargo(
+                id=cargo["id"],
+                name=cargo["name"],
+                description=cargo["description"],
+                volume=cargo["volume"],
+                secondary_knowledge_id=cargo["secondary_knowledge_id"],
+                model_asset_name=cargo["model_asset_name"],
+                icon_asset_name=cargo["icon_asset_name"],
+                carried_model_asset_name=cargo["carried_model_asset_name"],
+                pick_up_animation_start=cargo["pick_up_animation_start"],
+                pick_up_animation_end=cargo["pick_up_animation_end"],
+                drop_animation_start=cargo["drop_animation_start"],
+                drop_animation_end=cargo["drop_animation_end"],
+                pick_up_time=cargo["pick_up_time"],
+                place_time=cargo["place_time"],
+                animator_state=cargo["animator_state"],
+                movement_modifier=cargo["movement_modifier"],
+                blocks_path=cargo["blocks_path"],
+                on_destroy_yield_cargos=cargo["on_destroy_yield_cargos"],
+                despawn_time=cargo["despawn_time"],
+                tier=cargo["tier"],
+                tag=cargo["tag"],
+                rarity=cargo["rarity"],
+                not_pickupable=cargo["not_pickupable"],
+                recipe=ItemRecipe.item_recipe(cargo["id"]),
+            )
+        return cargo_results
