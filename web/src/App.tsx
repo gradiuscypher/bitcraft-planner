@@ -224,7 +224,9 @@ function App() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/search" element={<SearchResults />} />
-            <Route path="/item/:type/:id" element={<ItemDetail />} />
+            <Route path="/item/:id" element={<ItemDetail />} />
+            <Route path="/building/:id" element={<ItemDetail />} />
+            <Route path="/cargo/:id" element={<ItemDetail />} />
           </Routes>
         </div>
       </Router>

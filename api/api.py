@@ -80,7 +80,9 @@ async def get_cargo(item_id: int) -> Item:
     """Get cargo by ID"""
     if item_id not in all_items:
         raise HTTPException(status_code=404, detail="Item not found")
-    return all_items[item_id]
+    item = all_items[item_id]
+    item.recipe = ItemRecipe.item_recipe(item_id)
+    return item
 
 
 @app.get("/search/items")

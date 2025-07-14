@@ -1,6 +1,20 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Package, Building, Truck, Search, ExternalLink } from 'lucide-react'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { 
+  ArrowLeft, 
+  Package, 
+  Building, 
+  Truck, 
+  Search, 
+  ExternalLink,
+  Clock,
+  Zap,
+  Trophy,
+  User,
+  ChefHat,
+  Wrench,
+  Target
+} from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -9,14 +23,64 @@ import { apiService, type ItemDetail, type BuildingDetail, type CargoDetail } fr
 
 type ItemDetailData = ItemDetail | BuildingDetail | CargoDetail
 
+interface RecipeData {
+  id: number
+  name: string
+  time_requirement: number
+  stamina_requirement: number
+  tool_durability_lost: number
+  building_requirement?: {
+    building_id: number
+    building_name: string
+    tier: number
+  }
+  level_requirements?: Array<{
+    skill_name: string
+    level: number
+  }>
+  tool_requirements?: Array<{
+    tool_id: number
+    tool_name: string
+    tier: number
+  }>
+  consumed_items?: Array<{
+    id: number
+    name: string
+    count: number
+  }>
+  experience_per_progress?: Array<{
+    skill_name: string
+    experience_per_level: number
+  }>
+  crafted_items?: Array<{
+    id: number
+    name: string
+    count: number
+  }>
+  actions_required: number
+  tool_mesh_index: number
+  is_passive: boolean
+}
+
+interface ItemWithRecipe {
+  id: number
+  name: string
+  recipe?: RecipeData
+  [key: string]: unknown
+}
+
 export function ItemDetail() {
-  const { type, id } = useParams<{ type: string; id: string }>()
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [item, setItem] = useState<ItemDetailData | null>(null)
+  const location = useLocation()
+  const [item, setItem] = useState<ItemWithRecipe | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Determine type from the URL path
+  const type = location.pathname.split('/')[1] // 'item', 'building', or 'cargo'
 
-  const getItemDescription = (item: ItemDetailData): string => {
+  const getItemDescription = (item: ItemWithRecipe): string => {
     const itemWithDescription = item as Record<string, unknown>
     return typeof itemWithDescription.description === 'string' 
       ? itemWithDescription.description 
@@ -55,7 +119,7 @@ export function ItemDetail() {
             throw new Error('Invalid item type')
         }
 
-        setItem(itemData)
+        setItem(itemData as ItemWithRecipe)
       } catch (err) {
         setError('Failed to load item details. Please try again.')
         console.error('Item detail fetch error:', err)
@@ -103,6 +167,31 @@ export function ItemDetail() {
         return 'This is a cargo resource in Bitcraft. Cargo can be transported and used in various crafting recipes and building projects.'
       default:
         return 'This is a game asset in Bitcraft with various uses and properties.'
+    }
+  }
+
+  const formatTime = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    if (remainingSeconds === 0) return `${minutes}m`
+    return `${minutes}m ${remainingSeconds}s`
+  }
+
+  const getTierColor = (tier: number) => {
+    switch (tier) {
+      case 1:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
+      case 2:
+        return 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200'
+      case 3:
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
+      case 4:
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-200'
+      case 5:
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-200'
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
     }
   }
 
@@ -209,25 +298,148 @@ export function ItemDetail() {
                   </div>
                 </div>
 
-                <Separator />
-
-                <div>
-                  <h3 className="font-semibold mb-2 text-foreground">Additional Properties</h3>
-                  <div className="grid gap-2 text-sm">
-                    {Object.entries(item)
-                      .filter(([key]) => key !== 'id' && key !== 'name' && key !== 'description')
-                      .map(([key, value]) => (
-                        <div key={key} className="flex justify-between">
-                          <span className="text-muted-foreground capitalize">
-                            {key.replace(/_/g, ' ')}:
-                          </span>
-                          <span className="font-mono text-xs text-foreground">
-                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                          </span>
+                {/* Recipe Information - moved to main content area */}
+                {item.recipe && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="font-semibold mb-4 text-foreground flex items-center gap-2">
+                        <ChefHat className="h-5 w-5" />
+                        Recipe Information
+                      </h3>
+                      <div className="space-y-4">
+                        {/* Recipe Overview */}
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">Time: {formatTime(item.recipe.time_requirement)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">Stamina: {item.recipe.stamina_requirement}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Target className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">Actions: {item.recipe.actions_required}</span>
+                          </div>
                         </div>
-                      ))}
-                  </div>
-                </div>
+
+                        {/* Building Requirement */}
+                        {item.recipe.building_requirement && (
+                          <div>
+                            <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                              <Building className="h-4 w-4" />
+                              Building Required
+                            </h4>
+                            <div className="flex items-center justify-between">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="p-0 h-auto text-sm hover:text-primary"
+                                onClick={() => navigate(`/building/${item.recipe!.building_requirement!.building_id}`)}
+                              >
+                                {item.recipe.building_requirement.building_name}
+                              </Button>
+                              <Badge variant="outline" className={getTierColor(item.recipe.building_requirement.tier)}>
+                                Tier {item.recipe.building_requirement.tier}
+                              </Badge>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Level Requirements */}
+                        {item.recipe.level_requirements && item.recipe.level_requirements.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                              <User className="h-4 w-4" />
+                              Level Requirements
+                            </h4>
+                            <div className="space-y-1">
+                              {item.recipe.level_requirements.map((req, index) => (
+                                <div key={index} className="flex items-center justify-between">
+                                  <span className="text-sm">{req.skill_name}</span>
+                                  <Badge variant="outline">Level {req.level}</Badge>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Tool Requirements */}
+                        {item.recipe.tool_requirements && item.recipe.tool_requirements.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                              <Wrench className="h-4 w-4" />
+                              Tool Requirements
+                            </h4>
+                            <div className="space-y-1">
+                              {item.recipe.tool_requirements.map((req, index) => (
+                                <div key={index} className="flex items-center justify-between">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="p-0 h-auto text-sm hover:text-primary"
+                                    onClick={() => navigate(`/item/${req.tool_id}`)}
+                                  >
+                                    {req.tool_name}
+                                  </Button>
+                                  <Badge variant="outline" className={getTierColor(req.tier)}>
+                                    Tier {req.tier}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Materials Required */}
+                        {item.recipe.consumed_items && item.recipe.consumed_items.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                              <Package className="h-4 w-4" />
+                              Materials Required
+                            </h4>
+                            <div className="space-y-1">
+                              {item.recipe.consumed_items.map((material, index) => (
+                                <div key={index} className="flex items-center justify-between">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="p-0 h-auto text-sm hover:text-primary"
+                                    onClick={() => navigate(`/item/${material.id}`)}
+                                  >
+                                    {material.name}
+                                  </Button>
+                                  <Badge variant="outline">×{material.count}</Badge>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Experience Gained */}
+                        {item.recipe.experience_per_progress && item.recipe.experience_per_progress.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                              <Trophy className="h-4 w-4" />
+                              Experience Gained
+                            </h4>
+                            <div className="space-y-1">
+                              {item.recipe.experience_per_progress.map((exp, index) => (
+                                <div key={index} className="flex items-center justify-between">
+                                  <span className="text-sm">{exp.skill_name}</span>
+                                  <Badge variant="outline">+{exp.experience_per_level} XP</Badge>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+
               </CardContent>
             </Card>
           </div>
@@ -259,17 +471,25 @@ export function ItemDetail() {
               </CardContent>
             </Card>
 
-            {/* Related Info */}
+            {/* Additional Properties */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Coming Soon</CardTitle>
+                <CardTitle className="text-lg">Additional Properties</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div>• Crafting recipes</div>
-                  <div>• Required materials</div>
-                  <div>• Building requirements</div>
-                  <div>• Usage in recipes</div>
+                <div className="grid gap-2 text-sm">
+                  {Object.entries(item)
+                    .filter(([key]) => key !== 'id' && key !== 'name' && key !== 'description' && key !== 'recipe')
+                    .map(([key, value]) => (
+                      <div key={key} className="flex justify-between">
+                        <span className="text-muted-foreground capitalize">
+                          {key.replace(/_/g, ' ')}:
+                        </span>
+                        <span className="font-mono text-xs text-foreground break-all">
+                          {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                        </span>
+                      </div>
+                    ))}
                 </div>
               </CardContent>
             </Card>

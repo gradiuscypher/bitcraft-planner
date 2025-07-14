@@ -2,8 +2,8 @@
 Crafting planner for Bitcraft Online
 
 # Working on
-- Build the model methods that create our lookup dictionaies and then refactor API to return those objects
-- Create proper Pydantic API response objects
+- Some of the links in the item details dont go to the right spot (eg: buildings, tools)
+- Have a "Used In" functionality to show what an item is used in
 - Get the skill names from JSON as well so that we can present them in the recipes
 - SQLA implementation, example alembic setup - basic models for recipe sharing
 - Group crafting planner, allow there to be an owner link and viewer links

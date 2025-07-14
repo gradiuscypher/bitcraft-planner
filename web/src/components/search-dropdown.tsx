@@ -115,7 +115,7 @@ export function SearchDropdown({ onSearch, onSelectItem }: SearchDropdownProps) 
     setIsOpen(false)
     setQuery('')
     onSelectItem?.(item)
-    navigate(`/item/${item.type}/${item.id}`)
+    navigate(`/${item.type}/${item.id}`)
   }
 
   const getItemIcon = (type: string | null) => {

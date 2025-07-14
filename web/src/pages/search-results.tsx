@@ -40,7 +40,7 @@ export function SearchResults() {
   }, [query, navigate])
 
   const handleItemClick = (item: SearchResult) => {
-    navigate(`/item/${item.type}/${item.id}`)
+    navigate(`/${item.type}/${item.id}`)
   }
 
   const getItemIcon = (type: string | null) => {
