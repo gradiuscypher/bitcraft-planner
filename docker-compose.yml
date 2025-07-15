@@ -1,5 +1,5 @@
 services:
-  api:
+  bitcraft-api:
     build:
       context: ./api
       dockerfile: Dockerfile
@@ -30,7 +30,7 @@ services:
     networks:
       - hosting
 
-  web:
+  bitcraft-web:
     build:
       context: ./web
       dockerfile: Dockerfile
@@ -41,7 +41,7 @@ services:
     networks:
       - hosting
     depends_on:
-      - api
+      - bitcraft-api
 
 # Docker secrets for secure credential management
 secrets:
