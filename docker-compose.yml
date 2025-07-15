@@ -3,7 +3,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
-    expose:
+    ports:
       - "8000:8000"
     volumes:
       # Mount volume for SQLite database persistence only
@@ -37,7 +37,7 @@ services:
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=/api
-    expose:
+    ports:
       - "80:80"
     networks:
       - hosting
