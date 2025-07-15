@@ -1,6 +1,9 @@
 import logging
+import os
 from typing import Any
 
+import logfire
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -17,7 +20,13 @@ from helpers import (
 )
 from models import Cargo, Item, ItemRecipe
 
+load_dotenv()
+
+LOGFIRE_TOKEN = os.getenv("LOGFIRE_TOKEN")
+ENVIRONMENT = os.getenv("ENVIRONMENT")
+
 logger = logging.getLogger(__name__)
+logfire.configure(token=LOGFIRE_TOKEN, environment=ENVIRONMENT)
 
 items_by_name, items_by_id = load_item_descriptions()
 buildings_by_name, buildings_by_id = load_building_recipes()
@@ -32,6 +41,7 @@ all_cargo = Cargo.all_cargo()
 logger.info("Cargo loaded")
 
 app = FastAPI()
+logfire.instrument_fastapi(app)
 
 # Add CORS middleware
 app.add_middleware(
