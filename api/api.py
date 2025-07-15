@@ -40,6 +40,8 @@ app.add_middleware(
         "http://localhost:5173",  # Vite dev server
         "http://localhost:3000",  # Alternative React dev server
         "http://127.0.0.1:5173",  # Alternative localhost format
+        "https://bitcraft.derp.tools",  # Production domain
+        "http://bitcraft.derp.tools",   # Production domain (HTTP)
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
