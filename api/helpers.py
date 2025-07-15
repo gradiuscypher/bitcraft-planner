@@ -1,9 +1,13 @@
 import json
+import os
 from typing import Any
 
+from dotenv import load_dotenv
 from rapidfuzz import fuzz, process
 
-BITCRAFT_GAMEDATA_DIR = "/Users/gradius/git/BitCraft_GameData/server/region"
+load_dotenv()
+
+BITCRAFT_GAMEDATA_DIR = os.getenv("BITCRAFT_GAMEDATA_DIR")
 BUILDING_RECIPES_FILE = f"{BITCRAFT_GAMEDATA_DIR}/construction_recipe_desc.json"
 BUILDING_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/building_type_desc.json"
 CRAFTING_RECIPES_FILE = f"{BITCRAFT_GAMEDATA_DIR}/crafting_recipe_desc.json"
