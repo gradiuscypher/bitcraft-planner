@@ -8,7 +8,8 @@ services:
     volumes:
       # Mount volume for SQLite database persistence only
       - api_data:/api/data
-    # environment:
+    environment:
+      - BITCRAFT_GAMEDATA_DIR=/app/bitcraft-gamedata/server/region
     #   # OAuth redirect URLs for production
     #   - DISCORD_REDIRECT_URL=https://bitcraft.derp.tools/login
     #   - GOOGLE_REDIRECT_URL=https://bitcraft.derp.tools/login
@@ -59,4 +60,4 @@ volumes:
 
 networks:
   hosting:
-    driver: bridge 
+    driver: bridge
