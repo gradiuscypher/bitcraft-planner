@@ -4,7 +4,7 @@ services:
       context: ./api
       dockerfile: Dockerfile
     expose:
-      - "8002:8000"
+      - "8000:8000"
     volumes:
       # Mount volume for SQLite database persistence only
       - api_data:/api/data
@@ -38,7 +38,7 @@ services:
       args:
         - VITE_API_URL=/api
     expose:
-      - "8003:80"
+      - "80:80"
     networks:
       - hosting
     depends_on:
