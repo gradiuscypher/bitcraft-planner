@@ -4,7 +4,7 @@ services:
       context: ./api
       dockerfile: Dockerfile
     expose:
-      - "8000"
+      - "8002:8000"
     volumes:
       # Mount volume for SQLite database persistence only
       - api_data:/api/data
@@ -28,7 +28,7 @@ services:
       - jwt_secret_key
       - logfire_token
     networks:
-      - bitcraft-network
+      - hosting
 
   web:
     build:
@@ -37,9 +37,9 @@ services:
       args:
         - VITE_API_URL=/api
     expose:
-      - "80"
+      - "8003:80"
     networks:
-      - bitcraft-network
+      - hosting
     depends_on:
       - api
 
@@ -58,5 +58,5 @@ volumes:
   api_data:
 
 networks:
-  bitcraft-network:
+  hosting:
     driver: bridge 
