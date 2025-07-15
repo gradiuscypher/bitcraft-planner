@@ -3,6 +3,7 @@ Crafting planner for Bitcraft Online
 
 # Working on
 - Need to make building models like the cargo and items
+- Change wording on the main page to remove filler information
 - Have a "Used In" functionality to show what an item is used in
 - Get the skill names from JSON as well so that we can present them in the recipes
 - SQLA implementation, example alembic setup - basic models for recipe sharing
