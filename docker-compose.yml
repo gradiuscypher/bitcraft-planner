@@ -60,4 +60,4 @@ volumes:
 
 networks:
   hosting:
-    driver: bridge
+    external: true
