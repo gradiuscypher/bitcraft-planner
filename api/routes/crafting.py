@@ -4,8 +4,8 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from schemas.crafting import CraftingProject as DBCraftingProject
-from schemas.crafting import CraftingProjectItem as DBCraftingProjectItem
+from models.crafting import CraftingProjectItemOrm as DBCraftingProjectItem
+from models.crafting import CraftingProjectOrm as DBCraftingProject
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +49,10 @@ async def create_project(request: CreateProjectRequest) -> ProjectResponse:
             project_uuid=str(db_project.project_uuid),
             project_name=str(db_project.project_name),
         )
-    except Exception as e:
-        logger.error(f"Error creating project: {e}")
-        raise HTTPException(status_code=500, detail="Failed to create project")
+
+    except Exception:
+        logger.exception("Error creating project")
+        raise HTTPException(status_code=500, detail="Failed to create project") from None
 
 
 @crafting.get("/projects/{project_id}")
@@ -85,7 +86,7 @@ async def get_project_by_uuid(project_uuid: str) -> ProjectResponse:
             project_name=str(db_project.project_name),
         )
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid UUID format")
+        raise HTTPException(status_code=400, detail="Invalid UUID format") from None
 
 
 @crafting.post("/projects/{project_id}/items")
@@ -102,10 +103,13 @@ async def add_item_to_project(project_id: int, request: AddItemRequest) -> dict[
             item_id=request.item_id,
             count=request.count,
         )
+
+    except Exception:
+        logger.exception("Error adding item to project")
+        raise HTTPException(status_code=500, detail="Failed to add item to project") from None
+
+    else:
         return {"message": "Item added to project successfully"}
-    except Exception as e:
-        logger.error(f"Error adding item to project: {e}")
-        raise HTTPException(status_code=500, detail="Failed to add item to project")
 
 
 @crafting.delete("/projects/{project_id}/items/{item_id}")
@@ -118,10 +122,13 @@ async def remove_item_from_project(project_id: int, item_id: int) -> dict[str, s
 
     try:
         await DBCraftingProjectItem.remove_item_from_project(project_id, item_id)
+
+    except Exception:
+        logger.exception("Error removing item from project")
+        raise HTTPException(status_code=500, detail="Failed to remove item from project") from None
+
+    else:
         return {"message": "Item removed from project successfully"}
-    except Exception as e:
-        logger.error(f"Error removing item from project: {e}")
-        raise HTTPException(status_code=500, detail="Failed to remove item from project")
 
 
 @crafting.get("/projects/{project_id}/items")
@@ -165,7 +172,10 @@ async def update_item_count(project_id: int, item_id: int, request: UpdateItemCo
 
     try:
         await target_item.update_item_count(request.count)
+
+    except Exception:
+        logger.exception("Error updating item count")
+        raise HTTPException(status_code=500, detail="Failed to update item count") from None
+
+    else:
         return {"message": "Item count updated successfully"}
-    except Exception as e:
-        logger.exception(f"Error updating item count: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update item count")
