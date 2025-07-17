@@ -15,7 +15,7 @@ logfire.configure(token=LOGFIRE_TOKEN, environment=ENVIRONMENT.value)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     # Startup: Initialize database tables
     await init_database()
     logger.info("Database initialized successfully")

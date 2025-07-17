@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from sqlalchemy import UUID, Column, ForeignKey, Integer, String, delete, select, update
+from sqlalchemy import UUID, Column, ForeignKey, Integer, String, delete, select
 from sqlalchemy.orm import relationship
 
 from database import Base, SessionLocal
