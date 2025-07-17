@@ -10,6 +10,6 @@ class CraftingProjectItem(BaseModel):
 
 class CraftingProject(BaseModel):
     project_id: int
-    project_owner: UUID4
+    project_uuid: UUID4
     project_name: str
     target_items: list[CraftingProjectItem]

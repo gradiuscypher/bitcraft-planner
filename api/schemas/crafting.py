@@ -26,7 +26,17 @@ class CraftingProject(Base):
             session.add(project)
             await session.commit()
             await session.refresh(project)
-        return project
+            # Access attributes while session is active
+            project_id = project.project_id
+            project_uuid_val = project.project_uuid
+            project_name_val = project.project_name
+
+        # Create a new object with plain values
+        result = CraftingProject()
+        result.project_id = project_id
+        result.project_uuid = project_uuid_val
+        result.project_name = project_name_val
+        return result
 
     @staticmethod
     async def get_project(project_id: int) -> "CraftingProject | None":
@@ -34,7 +44,18 @@ class CraftingProject(Base):
             project = await session.get(CraftingProject, project_id)
             if project:
                 await session.refresh(project)
-            return project or None
+                # Access attributes while session is active
+                pid = project.project_id
+                puuid = project.project_uuid
+                pname = project.project_name
+
+                # Create a new object with plain values
+                result = CraftingProject()
+                result.project_id = pid
+                result.project_uuid = puuid
+                result.project_name = pname
+                return result
+            return None
 
     @staticmethod
     async def get_project_by_uuid(project_uuid: UUID) -> "CraftingProject | None":
@@ -43,7 +64,18 @@ class CraftingProject(Base):
             project = result.scalar_one_or_none()
             if project:
                 await session.refresh(project)
-            return project
+                # Access attributes while session is active
+                pid = project.project_id
+                puuid = project.project_uuid
+                pname = project.project_name
+
+                # Create a new object with plain values
+                result = CraftingProject()
+                result.project_id = pid
+                result.project_uuid = puuid
+                result.project_name = pname
+                return result
+            return None
 
 class CraftingProjectItem(Base):
     """SQLAlchemy model for items in crafting projects"""
@@ -74,7 +106,19 @@ class CraftingProjectItem(Base):
     async def get_project_items(project_id: int) -> list["CraftingProjectItem"]:
         async with SessionLocal() as session:
             result = await session.execute(select(CraftingProjectItem).where(CraftingProjectItem.project_id == project_id))
-            return list(result.scalars().all())
+            items = list(result.scalars().all())
+
+            # Convert to objects with plain values
+            plain_items = []
+            for item in items:
+                plain_item = CraftingProjectItem()
+                plain_item.id = item.id
+                plain_item.project_id = item.project_id
+                plain_item.item_id = item.item_id
+                plain_item.count = item.count
+                plain_items.append(plain_item)
+
+            return plain_items
 
 
     async def update_item_count(self, count: int) -> None:

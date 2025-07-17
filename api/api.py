@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_database
+from routes.crafting import crafting
 from routes.items import items
 from settings import ENVIRONMENT, LOGFIRE_TOKEN
 
@@ -41,8 +42,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include the items router
+# Include the routers
 app.include_router(items)
+app.include_router(crafting)
 
 if __name__ == "__main__":
     import uvicorn
