@@ -1,9 +1,9 @@
-from sqlalchemy import UUID, Column, ForeignKey, Integer, String
-from sqlalchemy.orm import DeclarativeBase, relationship
+from uuid import uuid4
 
+from sqlalchemy import UUID, Column, ForeignKey, Integer, String, delete, select, update
+from sqlalchemy.orm import relationship
 
-class Base(DeclarativeBase):
-    pass
+from database import Base, SessionLocal
 
 
 class CraftingProject(Base):
@@ -11,12 +11,39 @@ class CraftingProject(Base):
     __tablename__ = "crafting_projects"
 
     project_id = Column(Integer, primary_key=True, index=True)
-    project_owner = Column(UUID(as_uuid=True), nullable=False, index=True)
+    project_uuid = Column(UUID(as_uuid=True), nullable=False, index=True)
     project_name = Column(String, nullable=False)
 
     # Relationship to project items
     target_items = relationship("CraftingProjectItem", back_populates="project", cascade="all, delete-orphan")
 
+    @staticmethod
+    async def create_project(project_name: str) -> "CraftingProject":
+        project_uuid = uuid4()
+        project = CraftingProject(project_uuid=project_uuid, project_name=project_name)
+
+        async with SessionLocal() as session:
+            session.add(project)
+            await session.commit()
+            await session.refresh(project)
+        return project
+
+    @staticmethod
+    async def get_project(project_id: int) -> "CraftingProject | None":
+        async with SessionLocal() as session:
+            project = await session.get(CraftingProject, project_id)
+            if project:
+                await session.refresh(project)
+            return project or None
+
+    @staticmethod
+    async def get_project_by_uuid(project_uuid: UUID) -> "CraftingProject | None":
+        async with SessionLocal() as session:
+            result = await session.execute(select(CraftingProject).where(CraftingProject.project_uuid == project_uuid))
+            project = result.scalar_one_or_none()
+            if project:
+                await session.refresh(project)
+            return project
 
 class CraftingProjectItem(Base):
     """SQLAlchemy model for items in crafting projects"""
@@ -29,3 +56,29 @@ class CraftingProjectItem(Base):
 
     # Relationship back to project
     project = relationship("CraftingProject", back_populates="target_items")
+
+    @staticmethod
+    async def add_item_to_project(project_id: int, item_id: int, count: int) -> None:
+        async with SessionLocal() as session:
+            session.add(CraftingProjectItem(project_id=project_id, item_id=item_id, count=count))
+            await session.commit()
+
+    @staticmethod
+    async def remove_item_from_project(project_id: int, item_id: int) -> None:
+        async with SessionLocal() as session:
+            await session.execute(delete(CraftingProjectItem).where(CraftingProjectItem.project_id == project_id, CraftingProjectItem.item_id == item_id))
+            await session.commit()
+
+
+    @staticmethod
+    async def get_project_items(project_id: int) -> list["CraftingProjectItem"]:
+        async with SessionLocal() as session:
+            result = await session.execute(select(CraftingProjectItem).where(CraftingProjectItem.project_id == project_id))
+            return list(result.scalars().all())
+
+
+    async def update_item_count(self, count: int) -> None:
+        async with SessionLocal() as session:
+            self.count = count
+            session.add(self)
+            await session.commit()

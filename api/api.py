@@ -1,16 +1,29 @@
 import logging
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 import logfire
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from database import init_database
 from routes.items import items
 from settings import ENVIRONMENT, LOGFIRE_TOKEN
 
 logger = logging.getLogger(__name__)
 logfire.configure(token=LOGFIRE_TOKEN, environment=ENVIRONMENT.value)
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    # Startup: Initialize database tables
+    await init_database()
+    logger.info("Database initialized successfully")
+    yield
+    # Shutdown: Add any cleanup code here if needed
+
+
+app = FastAPI(lifespan=lifespan)
 logfire.instrument_fastapi(app)
 
 # Add CORS middleware

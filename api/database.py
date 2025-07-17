@@ -46,3 +46,9 @@ async def reset_database() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
+
+
+async def init_database() -> None:
+    """Initialize database tables if they don't exist"""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
