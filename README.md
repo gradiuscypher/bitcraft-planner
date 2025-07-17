@@ -2,12 +2,12 @@
 Crafting planner for Bitcraft Online
 
 # Working on
+- Group crafting planner, allow there to be an owner link and viewer links
 - Need to make building models like the cargo and items
 - Change wording on the main page to remove filler information
 - Have a "Used In" functionality to show what an item is used in
 - Get the skill names from JSON as well so that we can present them in the recipes
 - SQLA implementation, example alembic setup - basic models for recipe sharing
-- Group crafting planner, allow there to be an owner link and viewer links
 - Add item icons
 - Items (eg: pickaxe) don't have their use details (eg: power)
 - Change site title
