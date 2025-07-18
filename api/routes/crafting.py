@@ -1,11 +1,9 @@
 import logging
-from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from models.crafting import CraftingProjectItemOrm as DBCraftingProjectItem
-from models.crafting import CraftingProjectOrm as DBCraftingProject
+from models.crafting import CraftingProjectItemOrm, CraftingProjectOrm
 
 logger = logging.getLogger(__name__)
 
@@ -32,22 +30,27 @@ class ProjectResponse(BaseModel):
     project_name: str
 
 
+class NewProjectResponse(BaseModel):
+    public_uuid: str
+    private_uuid: str
+    project_name: str
+
+
 class ProjectItemResponse(BaseModel):
     item_id: int
     count: int
-    id: int
 
 
 @crafting.post("/projects")
-async def create_project(request: CreateProjectRequest) -> ProjectResponse:
+async def create_project(request: CreateProjectRequest) -> NewProjectResponse:
     """Create a new crafting project"""
     try:
-        db_project = await DBCraftingProject.create_project(request.project_name)
+        db_project = await CraftingProjectOrm.create_project(request.project_name)
 
-        return ProjectResponse(
-            project_id=int(db_project.project_id),
-            project_uuid=str(db_project.project_uuid),
-            project_name=str(db_project.project_name),
+        return NewProjectResponse(
+            public_uuid=str(db_project.public_uuid),
+            private_uuid=str(db_project.private_uuid),
+            project_name=request.project_name,
         )
 
     except Exception:
@@ -55,51 +58,38 @@ async def create_project(request: CreateProjectRequest) -> ProjectResponse:
         raise HTTPException(status_code=500, detail="Failed to create project") from None
 
 
-@crafting.get("/projects/{project_id}")
-async def get_project(project_id: int) -> ProjectResponse:
-    """Get a crafting project by ID"""
-    db_project = await DBCraftingProject.get_project(project_id)
-
-    if not db_project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    return ProjectResponse(
-        project_id=int(db_project.project_id),
-        project_uuid=str(db_project.project_uuid),
-        project_name=str(db_project.project_name),
-    )
-
-
-@crafting.get("/projects/uuid/{project_uuid}")
+@crafting.get("/projects/{project_uuid}")
 async def get_project_by_uuid(project_uuid: str) -> ProjectResponse:
     """Get a crafting project by UUID"""
     try:
-        uuid_obj = UUID(project_uuid)
-        db_project = await DBCraftingProject.get_project_by_uuid(uuid_obj)
+        db_project = await CraftingProjectOrm.get_project_by_uuid(project_uuid)
 
         if not db_project:
             raise HTTPException(status_code=404, detail="Project not found")
 
         return ProjectResponse(
             project_id=int(db_project.project_id),
-            project_uuid=str(db_project.project_uuid),
+            project_uuid=project_uuid,
             project_name=str(db_project.project_name),
         )
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid UUID format") from None
 
 
-@crafting.post("/projects/{project_id}/items")
-async def add_item_to_project(project_id: int, request: AddItemRequest) -> dict[str, str]:
+@crafting.post("/projects/{project_uuid}/items")
+async def add_item_to_project(project_uuid: str, request: AddItemRequest) -> dict[str, str]:
     """Add an item to a crafting project"""
     # Verify project exists
-    db_project = await DBCraftingProject.get_project(project_id)
+    db_project = await CraftingProjectOrm.get_project_by_uuid(project_uuid)
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    if not db_project.is_private:
+        raise HTTPException(status_code=403, detail="Use the private UUID to add items to this project")
+
     try:
-        await DBCraftingProjectItem.add_item_to_project(
-            project_id=project_id,
+        await CraftingProjectItemOrm.add_item_to_project(
+            project_id=db_project.project_id,
             item_id=request.item_id,
             count=request.count,
         )
@@ -112,16 +102,19 @@ async def add_item_to_project(project_id: int, request: AddItemRequest) -> dict[
         return {"message": "Item added to project successfully"}
 
 
-@crafting.delete("/projects/{project_id}/items/{item_id}")
-async def remove_item_from_project(project_id: int, item_id: int) -> dict[str, str]:
+@crafting.delete("/projects/{project_uuid}/items/{item_id}")
+async def remove_item_from_project(project_uuid: str, item_id: int) -> dict[str, str]:
     """Remove an item from a crafting project"""
     # Verify project exists
-    db_project = await DBCraftingProject.get_project(project_id)
+    db_project = await CraftingProjectOrm.get_project_by_uuid(project_uuid)
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    if not db_project.is_private:
+        raise HTTPException(status_code=403, detail="Use the private UUID to remove items from this project")
+
     try:
-        await DBCraftingProjectItem.remove_item_from_project(project_id, item_id)
+        await CraftingProjectItemOrm.remove_item_from_project(db_project.project_id, item_id)
 
     except Exception:
         logger.exception("Error removing item from project")
@@ -131,47 +124,45 @@ async def remove_item_from_project(project_id: int, item_id: int) -> dict[str, s
         return {"message": "Item removed from project successfully"}
 
 
-@crafting.get("/projects/{project_id}/items")
-async def get_project_items(project_id: int) -> list[ProjectItemResponse]:
+
+@crafting.get("/projects/{project_uuid}/items")
+async def get_project_items(project_uuid: str) -> list[ProjectItemResponse]:
     """Get all items in a crafting project"""
-    # Verify project exists
-    db_project = await DBCraftingProject.get_project(project_id)
+
+    db_project = await CraftingProjectOrm.get_project_by_uuid(project_uuid)
+
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    project_items = await DBCraftingProjectItem.get_project_items(project_id)
+    project_items = await CraftingProjectItemOrm.get_project_items(db_project.project_id)
 
     return [
         ProjectItemResponse(
             item_id=item.item_id,
             count=item.count,
-            id=item.id,
         )
         for item in project_items
     ]
 
 
-@crafting.put("/projects/{project_id}/items/{item_id}/count")
-async def update_item_count(project_id: int, item_id: int, request: UpdateItemCountRequest) -> dict[str, str]:
+@crafting.put("/projects/{project_uuid}/items/{item_id}/count")
+async def update_item_count(project_uuid: str, item_id: int, request: UpdateItemCountRequest) -> dict[str, str]:
     """Update the count of an item in a crafting project"""
     # Verify project exists
-    db_project = await DBCraftingProject.get_project(project_id)
+    db_project = await CraftingProjectOrm.get_project_by_uuid(project_uuid)
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Get the specific project item
-    project_items = await DBCraftingProjectItem.get_project_items(project_id)
-    target_item = None
-    for item in project_items:
-        if int(item.item_id) == item_id:
-            target_item = item
-            break
-
-    if not target_item:
-        raise HTTPException(status_code=404, detail="Item not found in project")
+    if not db_project.is_private:
+        raise HTTPException(status_code=403, detail="Use the private UUID to update item counts in this project")
 
     try:
-        await target_item.update_item_count(request.count)
+        project_item = await CraftingProjectItemOrm.get_project_item(db_project.project_id, item_id)
+
+        if not project_item:
+            raise HTTPException(status_code=404, detail="Item not found in project")
+
+        await project_item.update_item_count(request.count)
 
     except Exception:
         logger.exception("Error updating item count")

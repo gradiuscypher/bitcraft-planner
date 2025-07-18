@@ -2,6 +2,7 @@
 Crafting planner for Bitcraft Online
 
 # Working on
+- Test project item endpoints
 - Group crafting planner, allow there to be an owner link and viewer links
 - Need to make building models like the cargo and items
 - Change wording on the main page to remove filler information
