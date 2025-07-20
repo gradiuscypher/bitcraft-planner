@@ -88,7 +88,23 @@ class CraftingProjectOrm(Base):
                     "target_items": [],
                 })
                 project_items = await CraftingProjectItemOrm.get_project_items(result.project_id)
-                result.target_items = [CraftingProjectItem.model_validate(item) for item in project_items]
+                # Convert CraftingProjectItemOrm to simple dict with item_id and count
+                result.target_items = [
+                    CraftingProjectItem(
+                        item=Item(
+                            id=item.item_id, 
+                            name="", 
+                            description="",
+                            volume=0,
+                            durability=0,
+                            model_asset_name="",
+                            icon_asset_name="",
+                            tier=0,
+                            tag=""
+                        ),  # Minimal item for validation
+                        count=item.count
+                    ) for item in project_items
+                ]
                 return result
             return None
 
@@ -119,7 +135,23 @@ class CraftingProjectOrm(Base):
                     "is_private": project.private_uuid == project_uuid,
                 })
                 project_items = await CraftingProjectItemOrm.get_project_items(result.project_id)
-                result.target_items = [CraftingProjectItem.model_validate(item) for item in project_items]
+                # Convert CraftingProjectItemOrm to simple dict with item_id and count
+                result.target_items = [
+                    CraftingProjectItem(
+                        item=Item(
+                            id=item.item_id, 
+                            name="", 
+                            description="",
+                            volume=0,
+                            durability=0,
+                            model_asset_name="",
+                            icon_asset_name="",
+                            tier=0,
+                            tag=""
+                        ),  # Minimal item for validation
+                        count=item.count
+                    ) for item in project_items
+                ]
 
                 return result
             return None

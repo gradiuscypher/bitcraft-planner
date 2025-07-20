@@ -156,17 +156,16 @@ async def update_item_count(project_uuid: str, item_id: int, request: UpdateItem
     if not db_project.is_private:
         raise HTTPException(status_code=403, detail="Use the private UUID to update item counts in this project")
 
+    project_item = await CraftingProjectItemOrm.get_project_item(db_project.project_id, item_id)
+
+    if not project_item:
+        raise HTTPException(status_code=404, detail="Item not found in project")
+
     try:
-        project_item = await CraftingProjectItemOrm.get_project_item(db_project.project_id, item_id)
-
-        if not project_item:
-            raise HTTPException(status_code=404, detail="Item not found in project")
-
         await project_item.update_item_count(request.count)
 
     except Exception:
         logger.exception("Error updating item count")
         raise HTTPException(status_code=500, detail="Failed to update item count") from None
 
-    else:
-        return {"message": "Item count updated successfully"}
+    return {"message": "Item count updated successfully"}
