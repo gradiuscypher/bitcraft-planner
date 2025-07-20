@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import init_database
 from routes.crafting import crafting
 from routes.items import items
-from settings import ENVIRONMENT, LOGFIRE_TOKEN
+from settings import ENVIRONMENT, LOGFIRE_TOKEN, EnvironmentEnum
 
 logger = logging.getLogger(__name__)
 logfire.configure(token=LOGFIRE_TOKEN, environment=ENVIRONMENT.value)
@@ -27,20 +27,30 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(lifespan=lifespan)
 logfire.instrument_fastapi(app)
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Vite dev server
-        "http://localhost:3000",  # Alternative React dev server
-        "http://127.0.0.1:5173",  # Alternative localhost format
-        "https://bitcraft.derp.tools",  # Production domain
-        "http://bitcraft.derp.tools",   # Production domain (HTTP)
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["*"],
-)
+# Configure CORS based on environment
+if ENVIRONMENT == EnvironmentEnum.PROD:
+    # In production, use restricted CORS settings
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "https://bitcraft.derp.tools",  # Production domain
+            "http://bitcraft.derp.tools",   # Production domain (HTTP)
+        ],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["*"],
+    )
+    logger.info("CORS restrictions enabled for production environment")
+else:
+    # In development/test, allow all origins (effectively disables CORS)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Allow all origins in dev/test
+        allow_credentials=False,  # Must be False when allow_origins=["*"]
+        allow_methods=["*"],  # Allow all methods
+        allow_headers=["*"],  # Allow all headers
+    )
+    logger.info("CORS restrictions disabled for development/test environment")
 
 # Include the routers
 app.include_router(items)
