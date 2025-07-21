@@ -103,6 +103,14 @@ class CraftingProjectOrm(Base):
             if not owner:
                 raise ValueError(f"User with ID {owner_user_id} not found")
             
+            # Store owner attributes while session is active to avoid lazy loading issues
+            owner_data = {
+                "user_id": owner.id,
+                "discord_id": owner.discord_id,
+                "username": owner.username,
+                "global_name": owner.global_name
+            }
+            
             ownership = CraftingProjectOwnership(project_id=project.project_id, user_id=owner_user_id)
             session.add(ownership)
             
@@ -117,12 +125,7 @@ class CraftingProjectOrm(Base):
                 "project_name": project.project_name,
                 "target_items": [],
                 "owners": [
-                    CraftingProjectOwner(
-                        user_id=owner.id,
-                        discord_id=owner.discord_id,
-                        username=owner.username,
-                        global_name=owner.global_name
-                    )
+                    CraftingProjectOwner(**owner_data)
                 ],
             })
 
