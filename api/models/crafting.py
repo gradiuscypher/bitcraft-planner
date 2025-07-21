@@ -4,7 +4,7 @@ from datetime import datetime
 from pydantic import UUID4, BaseModel, ConfigDict
 from sqlalchemy import ForeignKey, Integer, String, delete, or_, select, DateTime
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
 
 from database import Base, SessionLocal
 from models.items import Item
@@ -129,11 +129,18 @@ class CraftingProjectOrm(Base):
     @staticmethod
     async def get_project(project_id: int) -> "CraftingProject | None":
         async with SessionLocal() as session:
-            project = await session.get(CraftingProjectOrm, project_id)
+            # Use eager loading to avoid lazy loading issues
+            query = await session.execute(
+                select(CraftingProjectOrm)
+                .options(
+                    selectinload(CraftingProjectOrm.ownership_records).selectinload(CraftingProjectOwnership.user),
+                    selectinload(CraftingProjectOrm.target_items)
+                )
+                .where(CraftingProjectOrm.project_id == project_id)
+            )
+            project = query.scalar_one_or_none()
             if project:
-                await session.refresh(project)
-
-                # Get owners through ownership records
+                # Get owners through ownership records (now eagerly loaded)
                 owners_data = [
                     CraftingProjectOwner(
                         user_id=ownership.user.id,
@@ -151,8 +158,7 @@ class CraftingProjectOrm(Base):
                     "target_items": [],
                     "owners": owners_data,
                 })
-                project_items = await CraftingProjectItemOrm.get_project_items(result.project_id)
-                # Convert CraftingProjectItemOrm to simple dict with item_id and count
+                # Convert target_items that are already loaded
                 result.target_items = [
                     CraftingProjectItem(
                         item=Item(
@@ -167,7 +173,7 @@ class CraftingProjectOrm(Base):
                             tag=""
                         ),  # Minimal item for validation
                         count=item.count
-                    ) for item in project_items
+                    ) for item in project.target_items
                 ]
                 return result
             return None
@@ -176,21 +182,24 @@ class CraftingProjectOrm(Base):
     async def get_project_by_uuid(project_uuid: str) -> "CraftingProjectResponse | None":
         project_uuid = UUID4(project_uuid) # type: ignore[assignment]
         async with SessionLocal() as session:
-            # Search for the UUID in both public_uuid and private_uuid fields
+            # Search for the UUID in both public_uuid and private_uuid fields with eager loading
             query = await session.execute(
-                select(CraftingProjectOrm).where(
+                select(CraftingProjectOrm)
+                .options(
+                    selectinload(CraftingProjectOrm.ownership_records).selectinload(CraftingProjectOwnership.user),
+                    selectinload(CraftingProjectOrm.target_items)
+                )
+                .where(
                     or_(
                         CraftingProjectOrm.public_uuid == project_uuid,
                         CraftingProjectOrm.private_uuid == project_uuid,
                     ),
-                ),
+                )
             )
             project = query.scalar_one_or_none()
 
             if project:
-                await session.refresh(project)
-
-                # Get owners through ownership records
+                # Get owners through ownership records (now eagerly loaded)
                 owners_data = [
                     CraftingProjectOwner(
                         user_id=ownership.user.id,
@@ -209,8 +218,7 @@ class CraftingProjectOrm(Base):
                     "owners": owners_data,
                     "is_private": project.private_uuid == project_uuid,
                 })
-                project_items = await CraftingProjectItemOrm.get_project_items(result.project_id)
-                # Convert CraftingProjectItemOrm to simple dict with item_id and count
+                # Convert target_items that are already loaded
                 result.target_items = [
                     CraftingProjectItem(
                         item=Item(
@@ -225,7 +233,7 @@ class CraftingProjectOrm(Base):
                             tag=""
                         ),  # Minimal item for validation
                         count=item.count
-                    ) for item in project_items
+                    ) for item in project.target_items
                 ]
 
                 return result
@@ -312,18 +320,21 @@ class CraftingProjectOrm(Base):
     async def get_user_projects(user_id: int) -> list["CraftingProject"]:
         """Get all projects owned by a specific user"""
         async with SessionLocal() as session:
+            # Use eager loading to avoid lazy loading issues
             query = await session.execute(
                 select(CraftingProjectOrm)
                 .join(CraftingProjectOwnership)
+                .options(
+                    selectinload(CraftingProjectOrm.ownership_records).selectinload(CraftingProjectOwnership.user),
+                    selectinload(CraftingProjectOrm.target_items)
+                )
                 .where(CraftingProjectOwnership.user_id == user_id)
             )
-            projects = query.scalars().all()
+            projects = query.scalars().unique().all()
             
             result = []
             for project in projects:
-                await session.refresh(project)
-                
-                # Get owners through ownership records
+                # Get owners through ownership records (now eagerly loaded)
                 owners_data = [
                     CraftingProjectOwner(
                         user_id=ownership.user.id,
@@ -342,7 +353,7 @@ class CraftingProjectOrm(Base):
                     "owners": owners_data,
                 })
                 
-                project_items = await CraftingProjectItemOrm.get_project_items(project.project_id)
+                # Convert target_items that are already loaded
                 project_data.target_items = [
                     CraftingProjectItem(
                         item=Item(
@@ -357,7 +368,7 @@ class CraftingProjectOrm(Base):
                             tag=""
                         ),
                         count=item.count
-                    ) for item in project_items
+                    ) for item in project.target_items
                 ]
                 
                 result.append(project_data)

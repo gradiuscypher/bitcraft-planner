@@ -1,5 +1,5 @@
 import './App.css'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom'
 import { Button } from "@/components/ui/button"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -21,6 +21,9 @@ import { SearchResults } from '@/pages/search-results'
 import { ItemDetail } from '@/pages/item-detail'
 import { LoginPage } from '@/pages/login'
 import { AuthCallback } from '@/pages/auth-callback'
+import { Projects } from '@/pages/projects'
+import { CreateProject } from '@/pages/create-project'
+import { ProjectDetail } from '@/pages/project-detail'
 
 // Landing page component
 function LandingPage() {
@@ -41,13 +44,17 @@ function LandingPage() {
             and coordinate with your community to build the ultimate civilization.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="text-lg px-8">
-              <Target className="h-5 w-5 mr-2" />
-              Start Planning
+            <Button size="lg" className="text-lg px-8" asChild>
+              <Link to="/projects">
+                <Target className="h-5 w-5 mr-2" />
+                Start Planning
+              </Link>
             </Button>
-            <Button variant="outline" size="lg" className="text-lg px-8">
-              <BookOpen className="h-5 w-5 mr-2" />
-              Browse Recipes
+            <Button variant="outline" size="lg" className="text-lg px-8" asChild>
+              <Link to="/search">
+                <BookOpen className="h-5 w-5 mr-2" />
+                Browse Recipes
+              </Link>
             </Button>
           </div>
         </div>
@@ -166,13 +173,17 @@ function App() {
 
                   {/* Navigation Links */}
                   <div className="flex items-center space-x-4">
-                    <Button variant="ghost" size="sm">
-                      <Hammer className="h-4 w-4 mr-2" />
-                      Crafting Planner
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to="/projects">
+                        <Hammer className="h-4 w-4 mr-2" />
+                        Crafting Planner
+                      </Link>
                     </Button>
-                    <Button variant="ghost" size="sm">
-                      <BookOpen className="h-4 w-4 mr-2" />
-                      Recipe Explorer
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to="/search">
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        Recipe Explorer
+                      </Link>
                     </Button>
                   </div>
                 </div>
@@ -201,6 +212,9 @@ function App() {
               <Route path="/cargo/:id" element={<ItemDetail />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/projects/create" element={<CreateProject />} />
+              <Route path="/projects/:uuid" element={<ProjectDetail />} />
             </Routes>
           </div>
         </Router>
