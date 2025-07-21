@@ -1,24 +1,24 @@
-from uuid import uuid4
 from datetime import datetime
+from uuid import uuid4
 
 from pydantic import UUID4, BaseModel, ConfigDict
-from sqlalchemy import ForeignKey, Integer, String, delete, or_, select, DateTime
+from sqlalchemy import DateTime, ForeignKey, Integer, String, delete, or_, select
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
 
 from database import Base, SessionLocal
 from models.items import Item
-from models.users import User
+from models.users import Guild, GuildOrm, User
 
 
 class CraftingProjectOwnership(Base):
     """Association object for many-to-many relationship between CraftingProject and User"""
     __tablename__ = "crafting_project_owners"
-    
+
     project_id: Mapped[int] = mapped_column(Integer, ForeignKey("crafting_projects.project_id"), primary_key=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), primary_key=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    
+
     # Relationships
     project = relationship("CraftingProjectOrm", back_populates="ownership_records")
     user = relationship("User", back_populates="ownership_records")
@@ -27,7 +27,7 @@ class CraftingProjectOwnership(Base):
 class CraftingProjectOwner(BaseModel):
     """Pydantic model for project owner information"""
     model_config = ConfigDict(from_attributes=True)
-    
+
     user_id: int
     discord_id: str
     username: str
@@ -48,6 +48,7 @@ class CraftingProject(BaseModel):
     public_uuid: UUID4
     private_uuid: UUID4
     project_name: str
+    guild: Guild | None = None
     target_items: list[CraftingProjectItem]
     owners: list[CraftingProjectOwner]
 
@@ -71,17 +72,26 @@ class CraftingProjectOrm(Base):
     public_uuid: Mapped[UUID4] = mapped_column(UUID, nullable=False, index=True)
     private_uuid: Mapped[UUID4] = mapped_column(UUID, nullable=False, index=True)
     project_name: Mapped[str] = mapped_column(String, nullable=False)
+    guild_id: Mapped[int] = mapped_column(Integer, ForeignKey("guilds.id"), nullable=True)
 
-    # Relationship to project items
     target_items = relationship("CraftingProjectItemOrm", back_populates="project", cascade="all, delete-orphan")
-    
-    # Relationship to ownership records
+
     ownership_records = relationship("CraftingProjectOwnership", back_populates="project", cascade="all, delete-orphan")
-    
-    # Convenient property to get owners directly
+
     @property
     def owners(self):
         return [ownership.user for ownership in self.ownership_records]
+
+    @property
+    def guild(self):
+        return self.guild_id
+
+    @staticmethod
+    async def add_guild(guild_id: int, name: str) -> "Guild":
+        async with SessionLocal() as session:
+            session.add(GuildOrm(id=guild_id, name=name))
+            await session.commit()
+            return Guild(id=guild_id, name=name)
 
     @staticmethod
     async def create_project(project_name: str, owner_user_id: int) -> "CraftingProject":
@@ -97,23 +107,23 @@ class CraftingProjectOrm(Base):
         async with SessionLocal() as session:
             session.add(project)
             await session.flush()  # Flush to get the project_id
-            
+
             # Get the owner user and create ownership record
             owner = await session.get(User, owner_user_id)
             if not owner:
                 raise ValueError(f"User with ID {owner_user_id} not found")
-            
+
             # Store owner attributes while session is active to avoid lazy loading issues
             owner_data = {
                 "user_id": owner.id,
                 "discord_id": owner.discord_id,
                 "username": owner.username,
-                "global_name": owner.global_name
+                "global_name": owner.global_name,
             }
-            
+
             ownership = CraftingProjectOwnership(project_id=project.project_id, user_id=owner_user_id)
             session.add(ownership)
-            
+
             await session.commit()
             await session.refresh(project)
 
@@ -125,7 +135,7 @@ class CraftingProjectOrm(Base):
                 "project_name": project.project_name,
                 "target_items": [],
                 "owners": [
-                    CraftingProjectOwner(**owner_data)
+                    CraftingProjectOwner(**owner_data),
                 ],
             })
 
@@ -137,9 +147,9 @@ class CraftingProjectOrm(Base):
                 select(CraftingProjectOrm)
                 .options(
                     selectinload(CraftingProjectOrm.ownership_records).selectinload(CraftingProjectOwnership.user),
-                    selectinload(CraftingProjectOrm.target_items)
+                    selectinload(CraftingProjectOrm.target_items),
                 )
-                .where(CraftingProjectOrm.project_id == project_id)
+                .where(CraftingProjectOrm.project_id == project_id),
             )
             project = query.scalar_one_or_none()
             if project:
@@ -149,7 +159,7 @@ class CraftingProjectOrm(Base):
                         user_id=ownership.user.id,
                         discord_id=ownership.user.discord_id,
                         username=ownership.user.username,
-                        global_name=ownership.user.global_name
+                        global_name=ownership.user.global_name,
                     ) for ownership in project.ownership_records
                 ]
 
@@ -165,17 +175,17 @@ class CraftingProjectOrm(Base):
                 result.target_items = [
                     CraftingProjectItem(
                         item=Item(
-                            id=item.item_id, 
-                            name="", 
+                            id=item.item_id,
+                            name="",
                             description="",
                             volume=0,
                             durability=0,
                             model_asset_name="",
                             icon_asset_name="",
                             tier=0,
-                            tag=""
+                            tag="",
                         ),  # Minimal item for validation
-                        count=item.count
+                        count=item.count,
                     ) for item in project.target_items
                 ]
                 return result
@@ -190,14 +200,14 @@ class CraftingProjectOrm(Base):
                 select(CraftingProjectOrm)
                 .options(
                     selectinload(CraftingProjectOrm.ownership_records).selectinload(CraftingProjectOwnership.user),
-                    selectinload(CraftingProjectOrm.target_items)
+                    selectinload(CraftingProjectOrm.target_items),
                 )
                 .where(
                     or_(
                         CraftingProjectOrm.public_uuid == project_uuid,
                         CraftingProjectOrm.private_uuid == project_uuid,
                     ),
-                )
+                ),
             )
             project = query.scalar_one_or_none()
 
@@ -208,7 +218,7 @@ class CraftingProjectOrm(Base):
                         user_id=ownership.user.id,
                         discord_id=ownership.user.discord_id,
                         username=ownership.user.username,
-                        global_name=ownership.user.global_name
+                        global_name=ownership.user.global_name,
                     ) for ownership in project.ownership_records
                 ]
 
@@ -225,17 +235,17 @@ class CraftingProjectOrm(Base):
                 result.target_items = [
                     CraftingProjectItem(
                         item=Item(
-                            id=item.item_id, 
-                            name="", 
+                            id=item.item_id,
+                            name="",
                             description="",
                             volume=0,
                             durability=0,
                             model_asset_name="",
                             icon_asset_name="",
                             tier=0,
-                            tag=""
+                            tag="",
                         ),  # Minimal item for validation
-                        count=item.count
+                        count=item.count,
                     ) for item in project.target_items
                 ]
 
@@ -250,28 +260,28 @@ class CraftingProjectOrm(Base):
             requester_ownership = await session.execute(
                 select(CraftingProjectOwnership).where(
                     CraftingProjectOwnership.project_id == project_id,
-                    CraftingProjectOwnership.user_id == requester_user_id
-                )
+                    CraftingProjectOwnership.user_id == requester_user_id,
+                ),
             )
             if not requester_ownership.scalar_one_or_none():
                 return False
-            
+
             # Find user by discord_id
             query = await session.execute(select(User).where(User.discord_id == discord_id))
             user_to_add = query.scalar_one_or_none()
             if not user_to_add:
                 return False
-            
+
             # Check if user is already an owner
             existing_ownership = await session.execute(
                 select(CraftingProjectOwnership).where(
                     CraftingProjectOwnership.project_id == project_id,
-                    CraftingProjectOwnership.user_id == user_to_add.id
-                )
+                    CraftingProjectOwnership.user_id == user_to_add.id,
+                ),
             )
             if existing_ownership.scalar_one_or_none():
                 return True  # Already an owner, consider this success
-            
+
             # Add user as owner
             ownership = CraftingProjectOwnership(project_id=project_id, user_id=user_to_add.id)
             session.add(ownership)
@@ -286,37 +296,37 @@ class CraftingProjectOrm(Base):
             requester_ownership = await session.execute(
                 select(CraftingProjectOwnership).where(
                     CraftingProjectOwnership.project_id == project_id,
-                    CraftingProjectOwnership.user_id == requester_user_id
-                )
+                    CraftingProjectOwnership.user_id == requester_user_id,
+                ),
             )
             if not requester_ownership.scalar_one_or_none():
                 return False
-            
+
             # Find user by discord_id
             query = await session.execute(select(User).where(User.discord_id == discord_id))
             user_to_remove = query.scalar_one_or_none()
             if not user_to_remove:
                 return False
-            
+
             # Check if there would be no owners left
             ownership_count = await session.execute(
-                select(CraftingProjectOwnership).where(CraftingProjectOwnership.project_id == project_id)
+                select(CraftingProjectOwnership).where(CraftingProjectOwnership.project_id == project_id),
             )
             if len(list(ownership_count.scalars().all())) <= 1:
                 return False  # Cannot remove the last owner
-            
+
             # Remove ownership record
             ownership_to_remove = await session.execute(
                 select(CraftingProjectOwnership).where(
                     CraftingProjectOwnership.project_id == project_id,
-                    CraftingProjectOwnership.user_id == user_to_remove.id
-                )
+                    CraftingProjectOwnership.user_id == user_to_remove.id,
+                ),
             )
             ownership = ownership_to_remove.scalar_one_or_none()
             if ownership:
                 await session.delete(ownership)
                 await session.commit()
-            
+
             return True
 
     @staticmethod
@@ -329,12 +339,12 @@ class CraftingProjectOrm(Base):
                 .join(CraftingProjectOwnership)
                 .options(
                     selectinload(CraftingProjectOrm.ownership_records).selectinload(CraftingProjectOwnership.user),
-                    selectinload(CraftingProjectOrm.target_items)
+                    selectinload(CraftingProjectOrm.target_items),
                 )
-                .where(CraftingProjectOwnership.user_id == user_id)
+                .where(CraftingProjectOwnership.user_id == user_id),
             )
             projects = query.scalars().unique().all()
-            
+
             result = []
             for project in projects:
                 # Get owners through ownership records (now eagerly loaded)
@@ -343,10 +353,10 @@ class CraftingProjectOrm(Base):
                         user_id=ownership.user.id,
                         discord_id=ownership.user.discord_id,
                         username=ownership.user.username,
-                        global_name=ownership.user.global_name
+                        global_name=ownership.user.global_name,
                     ) for ownership in project.ownership_records
                 ]
-                
+
                 project_data = CraftingProject.model_validate({
                     "project_id": project.project_id,
                     "public_uuid": project.public_uuid,
@@ -355,27 +365,27 @@ class CraftingProjectOrm(Base):
                     "target_items": [],
                     "owners": owners_data,
                 })
-                
+
                 # Convert target_items that are already loaded
                 project_data.target_items = [
                     CraftingProjectItem(
                         item=Item(
-                            id=item.item_id, 
-                            name="", 
+                            id=item.item_id,
+                            name="",
                             description="",
                             volume=0,
                             durability=0,
                             model_asset_name="",
                             icon_asset_name="",
                             tier=0,
-                            tag=""
+                            tag="",
                         ),
-                        count=item.count
+                        count=item.count,
                     ) for item in project.target_items
                 ]
-                
+
                 result.append(project_data)
-            
+
             return result
 
     @staticmethod
@@ -386,8 +396,8 @@ class CraftingProjectOrm(Base):
                 select(CraftingProjectOwnership)
                 .where(
                     CraftingProjectOwnership.project_id == project_id,
-                    CraftingProjectOwnership.user_id == user_id
-                )
+                    CraftingProjectOwnership.user_id == user_id,
+                ),
             )
             return query.scalar_one_or_none() is not None
 
@@ -402,17 +412,17 @@ class CraftingProjectOrm(Base):
                     or_(
                         CraftingProjectOrm.public_uuid == project_uuid,
                         CraftingProjectOrm.private_uuid == project_uuid,
-                    )
-                )
+                    ),
+                ),
             )
             project = query.scalar_one_or_none()
             if not project:
                 return False
-            
+
             # Check if user is an owner of the project
             if not await CraftingProjectOrm.user_is_owner(project.project_id, user_id):
                 return False
-            
+
             # Delete the project (cascade will handle items and ownership records)
             await session.delete(project)
             await session.commit()
@@ -437,7 +447,7 @@ class CraftingProjectItemOrm(Base):
         # Check if user is an owner of the project
         if not await CraftingProjectOrm.user_is_owner(project_id, user_id):
             return False
-            
+
         async with SessionLocal() as session:
             session.add(CraftingProjectItemOrm(project_id=project_id, item_id=item_id, count=count))
             await session.commit()
@@ -449,11 +459,11 @@ class CraftingProjectItemOrm(Base):
         # Check if user is an owner of the project
         if not await CraftingProjectOrm.user_is_owner(project_id, user_id):
             return False
-            
+
         async with SessionLocal() as session:
             await session.execute(delete(CraftingProjectItemOrm).where(
-                CraftingProjectItemOrm.project_id == project_id, 
-                CraftingProjectItemOrm.item_id == item_id
+                CraftingProjectItemOrm.project_id == project_id,
+                CraftingProjectItemOrm.item_id == item_id,
             ))
             await session.commit()
             return True
@@ -482,7 +492,7 @@ class CraftingProjectItemOrm(Base):
         # Check if user is an owner of the project
         if not await CraftingProjectOrm.user_is_owner(self.project_id, user_id):
             return False
-            
+
         async with SessionLocal() as session:
             self.count = count
             session.add(self)

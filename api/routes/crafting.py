@@ -1,13 +1,13 @@
 import logging
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from models.crafting import (
-    CraftingProjectItemOrm, 
-    CraftingProjectOrm, 
     CraftingProject,
-    CraftingProjectResponse
+    CraftingProjectItemOrm,
+    CraftingProjectOrm,
+    CraftingProjectResponse,
 )
 from models.users import User
 from routes.auth import get_current_user
@@ -20,6 +20,7 @@ crafting = APIRouter(prefix="/crafting", tags=["crafting"])
 
 class CreateProjectRequest(BaseModel):
     project_name: str
+    guild_id: int | None = None
 
 
 class AddItemRequest(BaseModel):
@@ -48,14 +49,14 @@ class ProjectItemResponse(BaseModel):
 
 @crafting.post("/projects")
 async def create_project(
-    request: CreateProjectRequest, 
-    current_user: User = Depends(get_current_user)
+    request: CreateProjectRequest,
+    current_user: User = Depends(get_current_user),
 ) -> NewProjectResponse:
     """Create a new crafting project"""
     try:
         db_project = await CraftingProjectOrm.create_project(
-            request.project_name, 
-            current_user.id
+            request.project_name,
+            current_user.id,
         )
 
         return NewProjectResponse(
@@ -71,7 +72,7 @@ async def create_project(
 
 @crafting.get("/projects")
 async def get_user_projects(
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> list[CraftingProject]:
     """Get all projects owned by the current user"""
     try:
@@ -98,9 +99,9 @@ async def get_project_by_uuid(project_uuid: str) -> CraftingProjectResponse:
 
 @crafting.post("/projects/{project_uuid}/items")
 async def add_item_to_project(
-    project_uuid: str, 
+    project_uuid: str,
     request: AddItemRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> dict[str, str]:
     """Add an item to a crafting project"""
     # Get project and verify it exists
@@ -115,11 +116,11 @@ async def add_item_to_project(
             count=request.count,
             user_id=current_user.id,
         )
-        
+
         if not success:
             raise HTTPException(
-                status_code=403, 
-                detail="You don't have permission to modify this project"
+                status_code=403,
+                detail="You don't have permission to modify this project",
             )
 
     except HTTPException:
@@ -133,9 +134,9 @@ async def add_item_to_project(
 
 @crafting.delete("/projects/{project_uuid}/items/{item_id}")
 async def remove_item_from_project(
-    project_uuid: str, 
+    project_uuid: str,
     item_id: int,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> dict[str, str]:
     """Remove an item from a crafting project"""
     # Get project and verify it exists
@@ -145,15 +146,15 @@ async def remove_item_from_project(
 
     try:
         success = await CraftingProjectItemOrm.remove_item_from_project(
-            db_project.project_id, 
+            db_project.project_id,
             item_id,
-            current_user.id
+            current_user.id,
         )
-        
+
         if not success:
             raise HTTPException(
-                status_code=403, 
-                detail="You don't have permission to modify this project"
+                status_code=403,
+                detail="You don't have permission to modify this project",
             )
 
     except HTTPException:
@@ -187,10 +188,10 @@ async def get_project_items(project_uuid: str) -> list[ProjectItemResponse]:
 
 @crafting.put("/projects/{project_uuid}/items/{item_id}/count")
 async def update_item_count(
-    project_uuid: str, 
-    item_id: int, 
+    project_uuid: str,
+    item_id: int,
     request: UpdateItemCountRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> dict[str, str]:
     """Update the count of an item in a crafting project"""
     # Get project and verify it exists
@@ -205,11 +206,11 @@ async def update_item_count(
 
     try:
         success = await project_item.update_item_count(request.count, current_user.id)
-        
+
         if not success:
             raise HTTPException(
-                status_code=403, 
-                detail="You don't have permission to modify this project"
+                status_code=403,
+                detail="You don't have permission to modify this project",
             )
 
     except HTTPException:
@@ -225,7 +226,7 @@ async def update_item_count(
 async def add_project_owner(
     project_uuid: str,
     request: AddOwnerRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> dict[str, str]:
     """Add a user as an owner of the project by their Discord ID"""
     # Get project and verify it exists
@@ -237,13 +238,13 @@ async def add_project_owner(
         success = await CraftingProjectOrm.add_owner_by_discord_id(
             project_id=db_project.project_id,
             discord_id=request.discord_id,
-            requester_user_id=current_user.id
+            requester_user_id=current_user.id,
         )
-        
+
         if not success:
             raise HTTPException(
-                status_code=403, 
-                detail="You don't have permission to add owners to this project, or the user was not found"
+                status_code=403,
+                detail="You don't have permission to add owners to this project, or the user was not found",
             )
 
     except HTTPException:
@@ -259,7 +260,7 @@ async def add_project_owner(
 async def remove_project_owner(
     project_uuid: str,
     discord_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> dict[str, str]:
     """Remove a user as an owner of the project by their Discord ID"""
     # Get project and verify it exists
@@ -271,13 +272,13 @@ async def remove_project_owner(
         success = await CraftingProjectOrm.remove_owner_by_discord_id(
             project_id=db_project.project_id,
             discord_id=discord_id,
-            requester_user_id=current_user.id
+            requester_user_id=current_user.id,
         )
-        
+
         if not success:
             raise HTTPException(
-                status_code=403, 
-                detail="You don't have permission to remove owners from this project, the user was not found, or you cannot remove the last owner"
+                status_code=403,
+                detail="You don't have permission to remove owners from this project, the user was not found, or you cannot remove the last owner",
             )
 
     except HTTPException:
@@ -292,16 +293,16 @@ async def remove_project_owner(
 @crafting.delete("/projects/{project_uuid}")
 async def delete_project(
     project_uuid: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ) -> dict[str, str]:
     """Delete a crafting project"""
     try:
         success = await CraftingProjectOrm.delete_project(project_uuid, current_user.id)
-        
+
         if not success:
             raise HTTPException(
-                status_code=403, 
-                detail="Project not found or you don't have permission to delete this project"
+                status_code=403,
+                detail="Project not found or you don't have permission to delete this project",
             )
 
     except ValueError:
