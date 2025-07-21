@@ -287,3 +287,29 @@ async def remove_project_owner(
         raise HTTPException(status_code=500, detail="Failed to remove project owner") from None
 
     return {"message": "User removed as project owner successfully"}
+
+
+@crafting.delete("/projects/{project_uuid}")
+async def delete_project(
+    project_uuid: str,
+    current_user: User = Depends(get_current_user)
+) -> dict[str, str]:
+    """Delete a crafting project"""
+    try:
+        success = await CraftingProjectOrm.delete_project(project_uuid, current_user.id)
+        
+        if not success:
+            raise HTTPException(
+                status_code=403, 
+                detail="Project not found or you don't have permission to delete this project"
+            )
+
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID format") from None
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Error deleting project")
+        raise HTTPException(status_code=500, detail="Failed to delete project") from None
+
+    return {"message": "Project deleted successfully"}

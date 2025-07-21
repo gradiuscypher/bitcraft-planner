@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, Plus, Minus, Users, Package, Search, Copy, Check, Settings, ArrowLeft, Edit3, Trash2 } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -379,7 +380,7 @@ export function ProjectDetail() {
       // For now, mock the item details since we need to integrate with the search/item system
       const mockItems: ItemWithDetails[] = projectData.target_items.map((item) => ({
         id: item.item.id,
-        name: item.item.name || `Item ${item.item.id}`,
+        name: item.item.name || item.item.description || `Item ${item.item.id}`,
         description: item.item.description || 'A crafting item',
         icon_asset_name: item.item.icon_asset_name,
         tier: item.item.tier,
@@ -408,6 +409,21 @@ export function ProjectDetail() {
       setTimeout(() => setLinkCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy link:', err);
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!project || !uuid) return;
+    
+    const confirmMessage = `Are you sure you want to delete "${project.project_name}"? This action cannot be undone.`;
+    if (!confirm(confirmMessage)) return;
+    
+    try {
+      await authService.deleteProject(uuid);
+      navigate('/projects');
+    } catch (err) {
+      console.error('Failed to delete project:', err);
+      alert('Failed to delete project. Please try again.');
     }
   };
 
@@ -484,10 +500,20 @@ export function ProjectDetail() {
               {linkCopied ? 'Copied!' : 'Share'}
             </Button>
             {canEdit && (
-              <Button variant="outline">
-                <Settings className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </Button>
+                </DropdownMenuTrigger>
+                                 <DropdownMenuContent>
+                   <DropdownMenuItem onClick={handleDeleteProject} className="text-destructive focus:text-destructive">
+                     <Trash2 className="h-4 w-4 mr-2" />
+                     Delete Project
+                   </DropdownMenuItem>
+                 </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </div>

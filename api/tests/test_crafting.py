@@ -287,6 +287,56 @@ class TestCraftingProjectItems:
         assert "Project not found" in response.json()["detail"]
 
 
+class TestProjectDeletion:
+    """Test project deletion endpoint."""
+
+    @pytest.mark.auth
+    @patch('routes.crafting.CraftingProjectOrm.delete_project')
+    def test_delete_project_success(self, mock_delete, authenticated_client: TestClient) -> None:
+        """Test successful project deletion."""
+        mock_delete.return_value = True
+        project_uuid = str(uuid4())
+        
+        response = authenticated_client.delete(f"/crafting/projects/{project_uuid}")
+        
+        assert response.status_code == httpx.codes.OK
+        data = response.json()
+        assert data["message"] == "Project deleted successfully"
+        
+        # Verify the ORM method was called correctly
+        mock_delete.assert_called_once_with(project_uuid, 1)
+
+    @pytest.mark.auth
+    @patch('routes.crafting.CraftingProjectOrm.delete_project')
+    def test_delete_project_not_found_or_no_permission(self, mock_delete, authenticated_client: TestClient) -> None:
+        """Test deleting project that doesn't exist or user doesn't own."""
+        mock_delete.return_value = False
+        project_uuid = str(uuid4())
+        
+        response = authenticated_client.delete(f"/crafting/projects/{project_uuid}")
+        
+        assert response.status_code == httpx.codes.FORBIDDEN
+        assert "Project not found or you don't have permission to delete this project" in response.json()["detail"]
+
+    def test_delete_project_unauthenticated(self, client: TestClient) -> None:
+        """Test deleting project without authentication should fail."""
+        project_uuid = str(uuid4())
+        
+        response = client.delete(f"/crafting/projects/{project_uuid}")
+        
+        assert response.status_code == httpx.codes.UNAUTHORIZED
+
+    @pytest.mark.auth
+    def test_delete_project_invalid_uuid(self, authenticated_client: TestClient) -> None:
+        """Test deleting project with invalid UUID format should fail."""
+        invalid_uuid = "not-a-valid-uuid"
+        
+        response = authenticated_client.delete(f"/crafting/projects/{invalid_uuid}")
+        
+        assert response.status_code == httpx.codes.BAD_REQUEST
+        assert "Invalid UUID format" in response.json()["detail"]
+
+
 class TestCraftingProjectWorkflows:
     """Test complete workflows combining multiple endpoints."""
 

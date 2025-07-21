@@ -388,6 +388,33 @@ class CraftingProjectOrm(Base):
             )
             return query.scalar_one_or_none() is not None
 
+    @staticmethod
+    async def delete_project(project_uuid: str, user_id: int) -> bool:
+        """Delete a project. Only project owners can delete projects."""
+        project_uuid = UUID4(project_uuid)  # type: ignore[assignment]
+        async with SessionLocal() as session:
+            # Get project and verify it exists
+            query = await session.execute(
+                select(CraftingProjectOrm).where(
+                    or_(
+                        CraftingProjectOrm.public_uuid == project_uuid,
+                        CraftingProjectOrm.private_uuid == project_uuid,
+                    )
+                )
+            )
+            project = query.scalar_one_or_none()
+            if not project:
+                return False
+            
+            # Check if user is an owner of the project
+            if not await CraftingProjectOrm.user_is_owner(project.project_id, user_id):
+                return False
+            
+            # Delete the project (cascade will handle items and ownership records)
+            await session.delete(project)
+            await session.commit()
+            return True
+
 
 class CraftingProjectItemOrm(Base):
     """SQLAlchemy model for items in crafting projects"""

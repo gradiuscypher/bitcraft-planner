@@ -160,6 +160,12 @@ class AuthService {
       body: JSON.stringify({ count }),
     });
   }
+
+  async deleteProject(uuid: string): Promise<{ message: string }> {
+    return this.makeRequest<{ message: string }>(API_ENDPOINTS.CRAFTING_PROJECT_BY_UUID(uuid), {
+      method: 'DELETE',
+    });
+  }
 }
 
 // Export a singleton instance
