@@ -7,8 +7,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_database
+from routes.auth import auth
 from routes.crafting import crafting
 from routes.items import items
+from routes.test import test
 from settings import ENVIRONMENT, LOGFIRE_TOKEN, EnvironmentEnum
 
 logger = logging.getLogger(__name__)
@@ -53,8 +55,10 @@ else:
     logger.info("CORS restrictions disabled for development/test environment")
 
 # Include the routers
+app.include_router(auth)
 app.include_router(items)
 app.include_router(crafting)
+app.include_router(test)
 
 if __name__ == "__main__":
     import uvicorn

@@ -4,18 +4,9 @@ import { Button } from "@/components/ui/button"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ModeToggle } from "@/components/mode-toggle"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu"
-import { 
   Settings, 
-  User,
   Hammer,
   BookOpen,
   Wrench,
@@ -24,8 +15,12 @@ import {
   Zap
 } from 'lucide-react'
 import { SearchDropdown } from '@/components/search-dropdown'
+import { UserNav } from '@/components/user-nav'
+import { AuthProvider } from '@/hooks/use-auth'
 import { SearchResults } from '@/pages/search-results'
 import { ItemDetail } from '@/pages/item-detail'
+import { LoginPage } from '@/pages/login'
+import { AuthCallback } from '@/pages/auth-callback'
 
 // Landing page component
 function LandingPage() {
@@ -134,12 +129,12 @@ function LandingPage() {
               </div>
             </div>
             <div className="bg-background/80 rounded-lg p-8 border">
-              <h4 className="font-semibold text-foreground mb-4">Coming Soon</h4>
+              <h4 className="font-semibold text-foreground mb-4">Available Now</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <div>• Advanced resource calculators</div>
-                <div>• Community project sharing</div>
-                <div>• Real-time crafting progress</div>
-                <div>• Integration with game data</div>
+                <div>• Discord OAuth integration</div>
+                <div>• Protected user areas</div>
+                <div>• Community features</div>
+                <div>• Secure authentication</div>
               </div>
             </div>
           </div>
@@ -153,83 +148,63 @@ function LandingPage() {
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <Router>
-        <div className="min-h-screen bg-background">
-          {/* Top Navbar */}
-          <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 text-foreground">
-            <div className="flex h-16 items-center px-6">
-              {/* Left Side - Logo and Navigation Links */}
-              <div className="flex items-center space-x-6">
-                {/* Logo/Brand */}
-                <div className="flex items-center space-x-2">
-                  <div className="h-8 w-8 bg-primary rounded-md flex items-center justify-center">
-                    <Hammer className="h-4 w-4 text-primary-foreground" />
+      <AuthProvider>
+        <Router>
+          <div className="min-h-screen bg-background">
+            {/* Top Navbar */}
+            <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 text-foreground">
+              <div className="flex h-16 items-center px-6">
+                {/* Left Side - Logo and Navigation Links */}
+                <div className="flex items-center space-x-6">
+                  {/* Logo/Brand */}
+                  <div className="flex items-center space-x-2">
+                    <div className="h-8 w-8 bg-primary rounded-md flex items-center justify-center">
+                      <Hammer className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                    <span className="font-bold text-xl text-foreground">Bitcraft Planner</span>
                   </div>
-                  <span className="font-bold text-xl text-foreground">Bitcraft Planner</span>
+
+                  {/* Navigation Links */}
+                  <div className="flex items-center space-x-4">
+                    <Button variant="ghost" size="sm">
+                      <Hammer className="h-4 w-4 mr-2" />
+                      Crafting Planner
+                    </Button>
+                    <Button variant="ghost" size="sm">
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      Recipe Explorer
+                    </Button>
+                  </div>
                 </div>
 
-                {/* Navigation Links - ADD NEW NAVIGATION LINKS HERE */}
+                {/* Search Bar - Responsively fills remaining space */}
+                <SearchDropdown />
+
+                {/* Right side */}
                 <div className="flex items-center space-x-4">
                   <Button variant="ghost" size="sm">
-                    <Hammer className="h-4 w-4 mr-2" />
-                    Crafting Planner
+                    <Settings className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm">
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    Recipe Explorer
-                  </Button>
-                  {/* Add future navigation links here */}
+                  <ModeToggle />
+                  <Separator orientation="vertical" className="h-6" />
+                  <UserNav />
                 </div>
               </div>
+            </nav>
 
-              {/* Search Bar - Responsively fills remaining space */}
-              <SearchDropdown />
-
-              {/* Right side */}
-              <div className="flex items-center space-x-4">
-                <Button variant="ghost" size="sm">
-                  <Settings className="h-4 w-4" />
-                </Button>
-                <ModeToggle />
-                <Separator orientation="vertical" className="h-6" />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src="" alt="User" />
-                        <AvatarFallback>BC</AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <DropdownMenuItem>
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      Log out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </nav>
-
-          {/* Main Content with Routing */}
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/search" element={<SearchResults />} />
-            <Route path="/item/:id" element={<ItemDetail />} />
-            <Route path="/building/:id" element={<ItemDetail />} />
-            <Route path="/cargo/:id" element={<ItemDetail />} />
-          </Routes>
-        </div>
-      </Router>
+            {/* Main Content with Routing */}
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/search" element={<SearchResults />} />
+              <Route path="/item/:id" element={<ItemDetail />} />
+              <Route path="/building/:id" element={<ItemDetail />} />
+              <Route path="/cargo/:id" element={<ItemDetail />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+            </Routes>
+          </div>
+        </Router>
+      </AuthProvider>
     </ThemeProvider>
   )
 }

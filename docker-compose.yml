@@ -11,7 +11,7 @@ services:
     environment:
       - BITCRAFT_GAMEDATA_DIR=/app/bitcraft-gamedata/server/region
     #   # OAuth redirect URLs for production
-    #   - DISCORD_REDIRECT_URL=https://bitcraft.derp.tools/login
+    #   - DISCORD_REDIRECT_URI=https://bitcraft.derp.tools/auth/callback
     #   - GOOGLE_REDIRECT_URL=https://bitcraft.derp.tools/login
 
     #   # File-based secrets (recommended approach)

@@ -7,7 +7,12 @@ from sqlalchemy.orm import DeclarativeBase
 
 from settings import ENVIRONMENT, LOGFIRE_TOKEN, EnvironmentEnum
 
-logfire.configure(token=LOGFIRE_TOKEN, environment=ENVIRONMENT.value)
+# Only configure logfire if token is provided
+if LOGFIRE_TOKEN:
+    logfire.configure(token=LOGFIRE_TOKEN, environment=ENVIRONMENT.value)
+else:
+    # Configure logfire to not send data when no token is provided
+    logfire.configure(send_to_logfire=False)
 
 # Create engine
 if ENVIRONMENT == EnvironmentEnum.TEST:
@@ -50,5 +55,9 @@ async def reset_database() -> None:
 
 async def init_database() -> None:
     """Initialize database tables if they don't exist"""
+    # Import models to ensure they're registered with Base
+    from models.crafting import CraftingProjectOrm, CraftingProjectItemOrm  # noqa: F401
+    from models.users import User  # noqa: F401
+    
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
