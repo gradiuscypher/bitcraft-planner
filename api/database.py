@@ -56,7 +56,7 @@ async def reset_database() -> None:
 async def init_database() -> None:
     """Initialize database tables if they don't exist"""
     # Import models to ensure they're registered with Base
-    from models.crafting import CraftingProjectOrm, CraftingProjectItemOrm  # noqa: F401
+    from models.crafting import CraftingProjectOrm, CraftingProjectItemOrm, CraftingProjectOwnership  # noqa: F401
     from models.users import User  # noqa: F401
     
     async with engine.begin() as conn:

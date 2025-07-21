@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import DateTime, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
 
@@ -13,8 +13,16 @@ class User(Base):
     discord_id: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
     username: Mapped[str] = mapped_column(String(100), nullable=False)
     discriminator: Mapped[str] = mapped_column(String(10), nullable=True)  # Legacy Discord discriminator
-    global_name: Mapped[str] = mapped_column(String(100), nullable=True)  # New Discord global name
+    global_name: Mapped[str] = mapped_column(String(100), nullable=True)  # New Discord display name
     avatar: Mapped[str] = mapped_column(String(200), nullable=True)
     email: Mapped[str] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship to ownership records
+    ownership_records = relationship("CraftingProjectOwnership", back_populates="user", cascade="all, delete-orphan")
+    
+    # Convenient property to get owned projects directly
+    @property
+    def owned_projects(self):
+        return [ownership.project for ownership in self.ownership_records]
