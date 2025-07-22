@@ -1,10 +1,26 @@
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base, SessionLocal
+
+if TYPE_CHECKING:
+    from models.projects import ProjectOrm
+
+
+class UserGroupMembership(Base):
+    __tablename__ = "user_group_memberships"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    user_group_id: Mapped[int] = mapped_column(ForeignKey("user_groups.id"), primary_key=True)
+    joined_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
+
+    # Relationships to the actual objects
+    user: Mapped["UserOrm"] = relationship("UserOrm", back_populates="group_memberships")
+    user_group: Mapped["UserGroupOrm"] = relationship("UserGroupOrm", back_populates="user_memberships")
 
 
 class User(BaseModel):
@@ -23,15 +39,6 @@ class User(BaseModel):
     owned_groups: list["UserGroup"]
 
 
-
-# Define the association table before the ORM classes
-user_group_memberships = Table(
-    "user_group_memberships",
-    Base.metadata,
-    Column("user_id", Integer, ForeignKey("users.id"), primary_key=True),
-    Column("group_id", Integer, ForeignKey("user_groups.id"), primary_key=True),
-)
-
 class UserOrm(Base):
     __tablename__ = "users"
 
@@ -44,15 +51,15 @@ class UserOrm(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
-    groups: Mapped[list["UserGroupOrm"]] = relationship(
-        "UserGroupOrm",
-        secondary=user_group_memberships,
-        back_populates="users",
-    )
-    owned_groups: Mapped[list["UserGroupOrm"]] = relationship(
-        "UserGroupOrm",
-        back_populates="owner",
-    )
+
+    # Association object relationships
+    group_memberships: Mapped[list["UserGroupMembership"]] = relationship("UserGroupMembership", back_populates="user")
+    owned_groups: Mapped[list["UserGroupOrm"]] = relationship("UserGroupOrm", back_populates="owner")
+
+    # Convenience property to access groups directly
+    @property
+    def groups(self) -> list["UserGroupOrm"]:
+        return [membership.user_group for membership in self.group_memberships]
 
 
 class UserGroup(BaseModel):
@@ -73,7 +80,16 @@ class UserGroupOrm(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     owner: Mapped[UserOrm] = relationship("UserOrm", back_populates="owned_groups")
-    users: Mapped[list[UserOrm]] = relationship("UserOrm", secondary="user_group_memberships", back_populates="groups")
+
+    # Association object relationships
+    user_memberships: Mapped[list["UserGroupMembership"]] = relationship("UserGroupMembership", back_populates="user_group")
+
+    # Convenience property to access users directly
+    @property
+    def users(self) -> list[UserOrm]:
+        return [membership.user for membership in self.user_memberships]
+
+    projects: Mapped[list["ProjectOrm"]] = relationship("ProjectOrm", back_populates="group")
 
     @staticmethod
     def create_user_group(name: str) -> "UserGroupOrm":
