@@ -20,7 +20,7 @@ crafting = APIRouter(prefix="/crafting", tags=["crafting"])
 
 class CreateProjectRequest(BaseModel):
     project_name: str
-    guild_id: int | None = None
+    group_id: int | None = None
 
 
 class AddItemRequest(BaseModel):

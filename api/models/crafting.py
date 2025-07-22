@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
 
 from database import Base, SessionLocal
 from models.items import Item
-from models.users import Guild, GuildOrm, User
+from models.users import Group, GroupOrm, User
 
 
 class CraftingProjectOwnership(Base):
@@ -48,7 +48,7 @@ class CraftingProject(BaseModel):
     public_uuid: UUID4
     private_uuid: UUID4
     project_name: str
-    guild: Guild | None = None
+    group: Group | None = None
     target_items: list[CraftingProjectItem]
     owners: list[CraftingProjectOwner]
 
@@ -72,7 +72,7 @@ class CraftingProjectOrm(Base):
     public_uuid: Mapped[UUID4] = mapped_column(UUID, nullable=False, index=True)
     private_uuid: Mapped[UUID4] = mapped_column(UUID, nullable=False, index=True)
     project_name: Mapped[str] = mapped_column(String, nullable=False)
-    guild_id: Mapped[int] = mapped_column(Integer, ForeignKey("guilds.id"), nullable=True)
+    group_id: Mapped[int] = mapped_column(Integer, ForeignKey("groups.id"), nullable=True)
 
     target_items = relationship("CraftingProjectItemOrm", back_populates="project", cascade="all, delete-orphan")
 
@@ -83,15 +83,15 @@ class CraftingProjectOrm(Base):
         return [ownership.user for ownership in self.ownership_records]
 
     @property
-    def guild(self):
-        return self.guild_id
+    def group(self):
+        return self.group_id
 
     @staticmethod
-    async def add_guild(guild_id: int, name: str) -> "Guild":
+    async def add_group(group_id: int, name: str) -> "Group":
         async with SessionLocal() as session:
-            session.add(GuildOrm(id=guild_id, name=name))
+            session.add(GroupOrm(id=group_id, name=name))
             await session.commit()
-            return Guild(id=guild_id, name=name)
+            return Group(id=group_id, name=name)
 
     @staticmethod
     async def create_project(project_name: str, owner_user_id: int) -> "CraftingProject":

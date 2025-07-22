@@ -7,23 +7,23 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base, SessionLocal
 
 
-class Guild(BaseModel):
+class Group(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     name: str
 
 
-class UserGuildMembership(Base):
-    __tablename__ = "user_guild_memberships"
+class UserGroupMembership(Base):
+    __tablename__ = "user_group_memberships"
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
-    guild_id: Mapped[int] = mapped_column(ForeignKey("guilds.id"), primary_key=True)
+    group_id: Mapped[int] = mapped_column(ForeignKey("groups.id"), primary_key=True)
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    user = relationship("User", back_populates="guild_memberships")
-    guild = relationship("Guild", back_populates="user_memberships")
+    user = relationship("User", back_populates="group_memberships")
+    group = relationship("Group", back_populates="user_memberships")
 
 
 class User(Base):
@@ -41,41 +41,41 @@ class User(Base):
 
     ownership_records = relationship("CraftingProjectOwnership", back_populates="user", cascade="all, delete-orphan")
 
-    guild_memberships = relationship("UserGuildMembership", back_populates="user", cascade="all, delete-orphan")
+    group_memberships = relationship("UserGroupMembership", back_populates="user", cascade="all, delete-orphan")
 
     @property
     def owned_projects(self):
         return [ownership.project for ownership in self.ownership_records]
 
     @property
-    def guilds(self):
-        return [membership.guild for membership in self.guild_memberships]
+    def groups(self):
+        return [membership.group for membership in self.group_memberships]
 
 
-class GuildOrm(Base):
-    __tablename__ = "guilds"
+class GroupOrm(Base):
+    __tablename__ = "groups"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    guild_owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    group_owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
-    user_memberships = relationship("UserGuildMembership", back_populates="guild", cascade="all, delete-orphan")
-    guild_owner = relationship("User", back_populates="owned_guilds")
+    user_memberships = relationship("UserGroupMembership", back_populates="group", cascade="all, delete-orphan")
+    group_owner = relationship("User", back_populates="owned_groups")
 
     @property
     def members(self):
         return [membership.user for membership in self.user_memberships]
 
     @staticmethod
-    async def get_guild(guild_id: int) -> "GuildOrm":
+    async def get_group(group_id: int) -> "GroupOrm":
         async with SessionLocal() as session:
-            return await session.get(GuildOrm, guild_id)
+            return await session.get(GroupOrm, group_id)
 
     @staticmethod
-    async def create_guild(name: str) -> "GuildOrm":
+    async def create_group(name: str) -> "GroupOrm":
         async with SessionLocal() as session:
-            session.add(GuildOrm(name=name))
+            session.add(GroupOrm(name=name))
             await session.commit()
-            return GuildOrm(id=session.get(GuildOrm, name=name).id, name=name)
+            return GroupOrm(id=session.get(GroupOrm, name=name).id, name=name)

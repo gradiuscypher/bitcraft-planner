@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends
 
-from models.users import Guild, GuildOrm, User
+from models.users import Group, GroupOrm, User
 from routes.auth import get_current_user
 
-guilds = APIRouter(prefix="/guilds", tags=["guilds"])
+groups = APIRouter(prefix="/groups", tags=["groups"])
 
 
-@guilds.get("/{guild_id}")
-async def get_guild(guild_id: int) -> Guild:
-    return await GuildOrm.get_guild(guild_id)
+@groups.get("/{group_id}")
+async def get_group(group_id: int) -> Group:
+    return await GroupOrm.get_group(group_id)
 
 
-@guilds.post("/{name}")
-async def create_guild(name: str, current_user: User = Depends(get_current_user)) -> Guild:
-    return await GuildOrm.create_guild(name, current_user.id)
+@groups.post("/{name}")
+async def create_group(name: str, current_user: User = Depends(get_current_user)) -> Group:
+    return await GroupOrm.create_group(name, current_user.id)
