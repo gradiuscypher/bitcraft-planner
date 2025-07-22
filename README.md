@@ -4,9 +4,8 @@ Crafting planner for Bitcraft Online
 # Working on
 - Clean up TODO
 - Don't enable logger in dev
-- Validate guild object integration with the planning objects
-- Validate guild API route
-- Create guild UI
+- Start over with groups / projects models and endpoints, something's defintely gotten too complex
+- Create group UI
 - Test project item endpoints
 - Group crafting planner, allow there to be an owner link and viewer links
 - Need to make building models like the cargo and items
