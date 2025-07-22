@@ -52,11 +52,10 @@ class UserOrm(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
-    # Association object relationships
     group_memberships: Mapped[list["UserGroupMembership"]] = relationship("UserGroupMembership", back_populates="user")
     owned_groups: Mapped[list["UserGroupOrm"]] = relationship("UserGroupOrm", back_populates="owner")
+    projects: Mapped[list["ProjectOrm"]] = relationship("ProjectOrm", back_populates="owner")
 
-    # Convenience property to access groups directly
     @property
     def groups(self) -> list["UserGroupOrm"]:
         return [membership.user_group for membership in self.group_memberships]
@@ -80,16 +79,14 @@ class UserGroupOrm(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     owner: Mapped[UserOrm] = relationship("UserOrm", back_populates="owned_groups")
+    projects: Mapped[list["ProjectOrm"]] = relationship("ProjectOrm", back_populates="group")
 
-    # Association object relationships
     user_memberships: Mapped[list["UserGroupMembership"]] = relationship("UserGroupMembership", back_populates="user_group")
 
-    # Convenience property to access users directly
     @property
     def users(self) -> list[UserOrm]:
         return [membership.user for membership in self.user_memberships]
 
-    projects: Mapped[list["ProjectOrm"]] = relationship("ProjectOrm", back_populates="group")
 
     @staticmethod
     def create_user_group(name: str) -> "UserGroupOrm":

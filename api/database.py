@@ -51,7 +51,12 @@ async def reset_database() -> None:
 async def init_database() -> None:
     """Initialize database tables if they don't exist"""
     # Import models to ensure they're registered with Base
-    from models.users import User  # noqa: F401
+    from models.projects import ProjectOrm  # noqa: F401, PLC0415
+    from models.users import (  # noqa: F401, PLC0415
+        UserGroupMembership,
+        UserGroupOrm,
+        UserOrm,
+    )
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
