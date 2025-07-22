@@ -9,8 +9,6 @@ import {
   Settings, 
   Hammer,
   BookOpen,
-  Wrench,
-  Target,
   Users,
   Zap
 } from 'lucide-react'
@@ -21,9 +19,7 @@ import { SearchResults } from '@/pages/search-results'
 import { ItemDetail } from '@/pages/item-detail'
 import { LoginPage } from '@/pages/login'
 import { AuthCallback } from '@/pages/auth-callback'
-import { Projects } from '@/pages/projects'
-import { CreateProject } from '@/pages/create-project'
-import { ProjectDetail } from '@/pages/project-detail'
+
 
 // Landing page component
 function LandingPage() {
@@ -36,21 +32,14 @@ function LandingPage() {
             <Hammer className="h-12 w-12 text-primary" />
           </div>
           <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6">
-            Plan Your Bitcraft
-            <span className="block text-primary">Crafting Journey</span>
+            Explore Bitcraft
+            <span className="block text-primary">Recipes</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Master the art of crafting in Bitcraft. Plan your projects, explore recipes, 
-            and coordinate with your community to build the ultimate civilization.
+            Discover and explore all available recipes in Bitcraft. Find the items, buildings, and cargo you need to build the ultimate civilization.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="text-lg px-8" asChild>
-              <Link to="/projects">
-                <Target className="h-5 w-5 mr-2" />
-                Start Planning
-              </Link>
-            </Button>
-            <Button variant="outline" size="lg" className="text-lg px-8" asChild>
               <Link to="/search">
                 <BookOpen className="h-5 w-5 mr-2" />
                 Browse Recipes
@@ -68,23 +57,11 @@ function LandingPage() {
               Everything You Need for Bitcraft
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Streamline your crafting workflow with powerful tools designed for the Bitcraft community
+              Explore and discover recipes with powerful search tools designed for the Bitcraft community
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="border-2 hover:border-primary/50 transition-colors">
-              <CardHeader>
-                <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                  <Target className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-xl">Project Planning</CardTitle>
-                <CardDescription>
-                  Plan complex crafting projects with resource calculations and step-by-step guides
-                </CardDescription>
-              </CardHeader>
-            </Card>
-
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             <Card className="border-2 hover:border-primary/50 transition-colors">
               <CardHeader>
                 <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
@@ -92,7 +69,7 @@ function LandingPage() {
                 </div>
                 <CardTitle className="text-xl">Recipe Explorer</CardTitle>
                 <CardDescription>
-                  Discover and explore all available recipes with detailed crafting requirements
+                  Discover and explore all available recipes with detailed information about items, buildings, and cargo
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -102,9 +79,9 @@ function LandingPage() {
                 <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                   <Users className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle className="text-xl">Community Coordination</CardTitle>
+                <CardTitle className="text-xl">Community Resource</CardTitle>
                 <CardDescription>
-                  Coordinate with your community to share resources and plan collaborative projects
+                  A shared resource for the Bitcraft community to find and explore game content together
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -121,27 +98,27 @@ function LandingPage() {
                 Built for Bitcraft Players
               </h3>
               <p className="text-muted-foreground mb-6">
-                Whether you're a solo crafter or part of a large civilization, our tools help you 
-                optimize your crafting workflow and achieve your building goals in Bitcraft.
+                Whether you're a solo player or part of a large civilization, our search tools help you 
+                discover and explore all the recipes and content available in Bitcraft.
               </p>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Wrench className="h-5 w-5 text-primary" />
-                  <span className="text-sm text-foreground">Resource Management</span>
+                  <BookOpen className="h-5 w-5 text-primary" />
+                  <span className="text-sm text-foreground">Recipe Discovery</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Zap className="h-5 w-5 text-primary" />
-                  <span className="text-sm text-foreground">Efficient Planning</span>
+                  <span className="text-sm text-foreground">Fast Search</span>
                 </div>
               </div>
             </div>
             <div className="bg-background/80 rounded-lg p-8 border">
               <h4 className="font-semibold text-foreground mb-4">Available Now</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
+                <div>• Complete recipe database</div>
+                <div>• Advanced search functionality</div>
                 <div>• Discord OAuth integration</div>
-                <div>• Protected user areas</div>
-                <div>• Community features</div>
-                <div>• Secure authentication</div>
+                <div>• Responsive design</div>
               </div>
             </div>
           </div>
@@ -173,12 +150,6 @@ function App() {
 
                   {/* Navigation Links */}
                   <div className="flex items-center space-x-4">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link to="/projects">
-                        <Hammer className="h-4 w-4 mr-2" />
-                        Crafting Planner
-                      </Link>
-                    </Button>
                     <Button variant="ghost" size="sm" asChild>
                       <Link to="/search">
                         <BookOpen className="h-4 w-4 mr-2" />
@@ -212,9 +183,6 @@ function App() {
               <Route path="/cargo/:id" element={<ItemDetail />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/projects/create" element={<CreateProject />} />
-              <Route path="/projects/:uuid" element={<ProjectDetail />} />
             </Routes>
           </div>
         </Router>

@@ -17,12 +17,6 @@ export const API_ENDPOINTS = {
   SEARCH_ITEMS: '/search/items',
   SEARCH_ALL: '/search/all',
   SEARCH_BEST: '/search/best',
-  
-  // Crafting project endpoints
-  CRAFTING_PROJECTS: '/crafting/projects',
-  CRAFTING_PROJECT_BY_UUID: (uuid: string) => `/crafting/projects/${uuid}`,
-  CRAFTING_PROJECT_ITEMS: (uuid: string) => `/crafting/projects/${uuid}/items`,
-  CRAFTING_PROJECT_OWNERS: (uuid: string) => `/crafting/projects/${uuid}/owners`,
 } as const;
 
 export const LOCAL_STORAGE_KEYS = {

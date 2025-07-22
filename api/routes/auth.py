@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from models.users import User
+from models.users import UserOrm
 from settings import (
     DISCORD_CLIENT_ID,
     DISCORD_CLIENT_SECRET,
@@ -68,10 +68,10 @@ class CallbackResponse(BaseModel):
         from_attributes = True
 
 
-async def create_or_update_user(user_data: dict[str, Any], db: AsyncSession) -> User:
+async def create_or_update_user(user_data: dict[str, Any], db: AsyncSession) -> UserOrm:
     """Create or update user from Discord data"""
     # Check if user already exists
-    stmt = select(User).where(User.discord_id == str(user_data["id"]))
+    stmt = select(UserOrm).where(UserOrm.discord_id == str(user_data["id"]))
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
@@ -84,7 +84,7 @@ async def create_or_update_user(user_data: dict[str, Any], db: AsyncSession) -> 
         user.updated_at = datetime.utcnow()
     else:
         # Create new user
-        user = User(
+        user = UserOrm(
             discord_id=str(user_data["id"]),
             username=user_data["username"],
             discriminator=user_data.get("discriminator"),
@@ -134,7 +134,7 @@ def verify_jwt_token(token: str) -> dict[str, Any] | None:
 async def get_current_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> User:
+) -> UserOrm:
     """FastAPI dependency to get current authenticated user"""
     # Get token from Authorization header
     authorization = request.headers.get("Authorization")
@@ -156,7 +156,7 @@ async def get_current_user(
         )
 
     # Get user from database
-    stmt = select(User).where(User.id == payload["user_id"])
+    stmt = select(UserOrm).where(UserOrm.id == payload["user_id"])
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
@@ -253,8 +253,8 @@ async def callback(code: str, db: AsyncSession = Depends(get_db)):
             ) from e
 
 
-@auth.get("/me", response_model=UserResponse)
-async def get_me(current_user: User = Depends(get_current_user)):
+@auth.get("/me")
+async def get_me(current_user: UserOrm = Depends(get_current_user)) -> UserResponse:
     """Get current user information"""
     return UserResponse(
         id=current_user.id,

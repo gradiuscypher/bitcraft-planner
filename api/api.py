@@ -2,20 +2,15 @@ import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-import logfire
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_database
 from routes.auth import auth
-from routes.crafting import crafting
-from routes.groups import groups
 from routes.items import items
-from routes.test import test
 from settings import ENVIRONMENT, LOGFIRE_TOKEN, EnvironmentEnum
 
 logger = logging.getLogger(__name__)
-logfire.configure(token=LOGFIRE_TOKEN, environment=ENVIRONMENT.value)
 
 
 @asynccontextmanager
@@ -28,10 +23,12 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(lifespan=lifespan)
-logfire.instrument_fastapi(app)
 
 # Configure CORS based on environment
 if ENVIRONMENT == EnvironmentEnum.PROD:
+    import logfire
+    logfire.configure(token=LOGFIRE_TOKEN, environment=ENVIRONMENT.value)
+    logfire.instrument_fastapi(app)
     # In production, use restricted CORS settings
     app.add_middleware(
         CORSMiddleware,
@@ -58,9 +55,6 @@ else:
 # Include the routers
 app.include_router(auth)
 app.include_router(items)
-app.include_router(crafting)
-app.include_router(groups)
-app.include_router(test)
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,13 +1,5 @@
 import { API_BASE_URL, API_ENDPOINTS, LOCAL_STORAGE_KEYS } from './config';
 import type { User, LoginResponse, AuthTokenResponse } from '@/types/auth';
-import type { 
-  CraftingProject, 
-  CraftingProjectResponse, 
-  CreateProjectRequest, 
-  CreateProjectResponse,
-  AddItemRequest,
-  ProjectItemResponse
-} from '@/types/crafting';
 
 class AuthService {
   private baseUrl: string;
@@ -119,52 +111,6 @@ class AuthService {
 
   async testAdminEndpoint(): Promise<any> {
     return this.makeRequest(API_ENDPOINTS.TEST_ADMIN);
-  }
-
-  // Crafting project methods
-  async createProject(request: CreateProjectRequest): Promise<CreateProjectResponse> {
-    return this.makeRequest<CreateProjectResponse>(API_ENDPOINTS.CRAFTING_PROJECTS, {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
-  }
-
-  async getUserProjects(): Promise<CraftingProject[]> {
-    return this.makeRequest<CraftingProject[]>(API_ENDPOINTS.CRAFTING_PROJECTS);
-  }
-
-  async getProjectByUuid(uuid: string): Promise<CraftingProjectResponse> {
-    return this.makeRequest<CraftingProjectResponse>(API_ENDPOINTS.CRAFTING_PROJECT_BY_UUID(uuid));
-  }
-
-  async addItemToProject(uuid: string, request: AddItemRequest): Promise<{ message: string }> {
-    return this.makeRequest<{ message: string }>(API_ENDPOINTS.CRAFTING_PROJECT_ITEMS(uuid), {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
-  }
-
-  async getProjectItems(uuid: string): Promise<ProjectItemResponse[]> {
-    return this.makeRequest<ProjectItemResponse[]>(API_ENDPOINTS.CRAFTING_PROJECT_ITEMS(uuid));
-  }
-
-  async removeItemFromProject(uuid: string, itemId: number): Promise<{ message: string }> {
-    return this.makeRequest<{ message: string }>(`${API_ENDPOINTS.CRAFTING_PROJECT_ITEMS(uuid)}/${itemId}`, {
-      method: 'DELETE',
-    });
-  }
-
-  async updateItemCount(uuid: string, itemId: number, count: number): Promise<{ message: string }> {
-    return this.makeRequest<{ message: string }>(`${API_ENDPOINTS.CRAFTING_PROJECT_ITEMS(uuid)}/${itemId}/count`, {
-      method: 'PUT',
-      body: JSON.stringify({ count }),
-    });
-  }
-
-  async deleteProject(uuid: string): Promise<{ message: string }> {
-    return this.makeRequest<{ message: string }>(API_ENDPOINTS.CRAFTING_PROJECT_BY_UUID(uuid), {
-      method: 'DELETE',
-    });
   }
 }
 
