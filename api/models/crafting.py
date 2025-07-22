@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from pydantic import UUID4, BaseModel, ConfigDict
@@ -8,7 +9,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
 
 from database import Base, SessionLocal
 from models.items import Item
-from models.users import Group, GroupOrm, User
+
+if TYPE_CHECKING:
+    from models.users import Group, User
 
 
 class CraftingProjectOwnership(Base):
@@ -48,7 +51,7 @@ class CraftingProject(BaseModel):
     public_uuid: UUID4
     private_uuid: UUID4
     project_name: str
-    group: Group | None = None
+    group: "Group | None" = None
     target_items: list[CraftingProjectItem]
     owners: list[CraftingProjectOwner]
 
@@ -79,23 +82,18 @@ class CraftingProjectOrm(Base):
     ownership_records = relationship("CraftingProjectOwnership", back_populates="project", cascade="all, delete-orphan")
 
     @property
-    def owners(self):
+    def owners(self) -> list["User"]:
         return [ownership.user for ownership in self.ownership_records]
 
     @property
-    def group(self):
-        return self.group_id
-
-    @staticmethod
-    async def add_group(group_id: int, name: str) -> "Group":
-        async with SessionLocal() as session:
-            session.add(GroupOrm(id=group_id, name=name))
-            await session.commit()
-            return Group(id=group_id, name=name)
+    def group(self) -> "Group | None":
+        return self.group
 
     @staticmethod
     async def create_project(project_name: str, owner_user_id: int) -> "CraftingProject":
         """Create a new project with the specified user as the initial owner"""
+        from models.users import User  # Import at runtime to avoid circular import
+
         public_uuid = uuid4()
         private_uuid = uuid4()
         project = CraftingProjectOrm(
@@ -255,6 +253,8 @@ class CraftingProjectOrm(Base):
     @staticmethod
     async def add_owner_by_discord_id(project_id: int, discord_id: str, requester_user_id: int) -> bool:
         """Add a user as an owner of the project by their Discord ID. Only existing owners can add new owners."""
+        from models.users import User  # Import at runtime to avoid circular import
+
         async with SessionLocal() as session:
             # Check if requester is an owner of the project
             requester_ownership = await session.execute(
@@ -291,6 +291,8 @@ class CraftingProjectOrm(Base):
     @staticmethod
     async def remove_owner_by_discord_id(project_id: int, discord_id: str, requester_user_id: int) -> bool:
         """Remove a user as an owner of the project by their Discord ID. Only existing owners can remove owners."""
+        from models.users import User  # Import at runtime to avoid circular import
+
         async with SessionLocal() as session:
             # Check if requester is an owner of the project
             requester_ownership = await session.execute(
@@ -328,6 +330,28 @@ class CraftingProjectOrm(Base):
                 await session.commit()
 
             return True
+
+    @staticmethod
+    async def get_group_projects(group_id: int) -> list["CraftingProjectResponse"]:
+        async with SessionLocal() as session:
+            query = await session.execute(
+                select(CraftingProjectOrm)
+                .options(
+                    selectinload(CraftingProjectOrm.ownership_records).selectinload(CraftingProjectOwnership.user),
+                    selectinload(CraftingProjectOrm.target_items),
+                )
+                .where(CraftingProjectOrm.group_id == group_id),
+            )
+            projects = query.scalars().unique().all()
+
+            return [CraftingProjectResponse.model_validate({
+                "project_id": project.project_id,
+                "public_uuid": project.public_uuid,
+                "private_uuid": project.private_uuid,
+                "project_name": project.project_name,
+                "target_items": [],
+                "owners": [],
+            }) for project in projects]
 
     @staticmethod
     async def get_user_projects(user_id: int) -> list["CraftingProject"]:
@@ -425,6 +449,13 @@ class CraftingProjectOrm(Base):
 
             # Delete the project (cascade will handle items and ownership records)
             await session.delete(project)
+            await session.commit()
+            return True
+
+    async def add_group(self, group_id: int) -> bool:
+        async with SessionLocal() as session:
+            self.group_id = group_id
+            session.add(self)
             await session.commit()
             return True
 

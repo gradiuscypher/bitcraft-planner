@@ -314,3 +314,28 @@ async def delete_project(
         raise HTTPException(status_code=500, detail="Failed to delete project") from None
 
     return {"message": "Project deleted successfully"}
+
+
+@crafting.post("/projects/{project_uuid}/groups/{group_id}")
+async def add_project_to_group(
+    project_uuid: str,
+    group_id: int,
+) -> dict[str, str]:
+    """Add a crafting project to a group"""
+    db_project = await CraftingProjectOrm.get_project_by_uuid(project_uuid)
+    if not db_project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    try:
+        success = await CraftingProjectOrm.add_group(db_project.project_id, group_id)
+
+        if not success:
+            raise HTTPException(status_code=403, detail="You don't have permission to add this project to this group")
+
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Error adding project to group")
+        raise HTTPException(status_code=500, detail="Failed to add project to group") from None
+
+    return {"message": "Project added to group successfully"}

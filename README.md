@@ -3,6 +3,7 @@ Crafting planner for Bitcraft Online
 
 # Working on
 - Clean up TODO
+- Don't enable logger in dev
 - Validate guild object integration with the planning objects
 - Validate guild API route
 - Create guild UI
@@ -23,6 +24,8 @@ Crafting planner for Bitcraft Online
 - can people create their own groups that individuals can be invited to for LFW queues
 
 # Backlog Unsorted
+- Speed up API startup
+- Review possible overuse of @staticmethod
 - Metadata for unfurler
 - Explorer for other JSON data in the game files?
 - Some sort of game TODO list - eg "reach 20 in this skill". Can resolve dependencies, so if you need to have a level in something before crafting an item, it can put both on the list
