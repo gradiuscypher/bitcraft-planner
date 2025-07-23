@@ -87,7 +87,6 @@ class UserGroupOrm(Base):
     def users(self) -> list[UserOrm]:
         return [membership.user for membership in self.user_memberships]
 
-
     @staticmethod
     def create_user_group(name: str, owner_id: int) -> "UserGroupOrm":
         with SessionLocal() as db:
@@ -99,3 +98,13 @@ class UserGroupOrm(Base):
     def get_user_groups(user_id: int) -> list["UserGroupOrm"]:
         with SessionLocal() as db:
             return db.query(UserGroupOrm).filter(UserGroupOrm.owner_id == user_id).all()
+
+    @staticmethod
+    def get_user_group(group_id: int) -> "UserGroupOrm":
+        with SessionLocal() as db:
+            return db.query(UserGroupOrm).filter(UserGroupOrm.id == group_id).first()
+
+    def delete_user_group(self) -> None:
+        with SessionLocal() as db:
+            db.delete(self)
+            db.commit()
