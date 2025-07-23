@@ -89,8 +89,13 @@ class UserGroupOrm(Base):
 
 
     @staticmethod
-    def create_user_group(name: str) -> "UserGroupOrm":
+    def create_user_group(name: str, owner_id: int) -> "UserGroupOrm":
         with SessionLocal() as db:
-            user_group = UserGroupOrm(name=name)
+            user_group = UserGroupOrm(name=name, owner_id=owner_id)
             db.add(user_group)
             return user_group
+
+    @staticmethod
+    def get_user_groups(user_id: int) -> list["UserGroupOrm"]:
+        with SessionLocal() as db:
+            return db.query(UserGroupOrm).filter(UserGroupOrm.owner_id == user_id).all()
