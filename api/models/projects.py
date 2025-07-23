@@ -2,10 +2,10 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base, SessionLocal
+from database import Base
 
 if TYPE_CHECKING:
     from models.users import UserOrm, UserGroupOrm  # noqa: I001

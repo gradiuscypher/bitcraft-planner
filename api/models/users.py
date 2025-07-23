@@ -5,7 +5,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base, SessionLocal
+from database import Base
 
 if TYPE_CHECKING:
     from models.projects import ProjectOrm
@@ -21,6 +21,18 @@ class UserGroupMembership(Base):
     # Relationships to the actual objects
     user: Mapped["UserOrm"] = relationship("UserOrm", back_populates="group_memberships")
     user_group: Mapped["UserGroupOrm"] = relationship("UserGroupOrm", back_populates="user_memberships")
+
+
+class BasicUser(BaseModel):
+    """Simplified user model without circular references for use in groups"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    discord_id: str
+    username: str
+    discriminator: str | None = None
+    global_name: str | None = None
+    avatar: str | None = None
 
 
 class User(BaseModel):
@@ -68,7 +80,7 @@ class UserGroup(BaseModel):
     name: str
     created_at: datetime
     owner_id: int
-    users: list[User]
+    users: list[BasicUser]
 
 
 class UserGroupOrm(Base):
@@ -86,25 +98,3 @@ class UserGroupOrm(Base):
     @property
     def users(self) -> list[UserOrm]:
         return [membership.user for membership in self.user_memberships]
-
-    @staticmethod
-    def create_user_group(name: str, owner_id: int) -> "UserGroupOrm":
-        with SessionLocal() as db:
-            user_group = UserGroupOrm(name=name, owner_id=owner_id)
-            db.add(user_group)
-            return user_group
-
-    @staticmethod
-    def get_user_groups(user_id: int) -> list["UserGroupOrm"]:
-        with SessionLocal() as db:
-            return db.query(UserGroupOrm).filter(UserGroupOrm.owner_id == user_id).all()
-
-    @staticmethod
-    def get_user_group(group_id: int) -> "UserGroupOrm":
-        with SessionLocal() as db:
-            return db.query(UserGroupOrm).filter(UserGroupOrm.id == group_id).first()
-
-    def delete_user_group(self) -> None:
-        with SessionLocal() as db:
-            db.delete(self)
-            db.commit()

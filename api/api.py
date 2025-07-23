@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import init_database
 from routes.auth import auth
+from routes.groups import groups
 from routes.items import items
 from settings import ENVIRONMENT, LOGFIRE_TOKEN, EnvironmentEnum
 
@@ -55,6 +56,7 @@ else:
 # Include the routers
 app.include_router(auth)
 app.include_router(items)
+app.include_router(groups)
 
 if __name__ == "__main__":
     import uvicorn

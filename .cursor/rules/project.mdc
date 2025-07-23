@@ -26,3 +26,4 @@ This project uses the following tech stack, please use best practices when imple
 - You do not need to write documentation for the features you create
 - Do not try to run the project API or webserver. Validate your API changes via linters and testing.
 - Do not include unneeded blank spaces in lines. If a line is intended to be a new line, there should be no additional space or tab characters in that line.
+- Do not add comments unless the modifications you're making are significantly complex. If you're in doubt, default to not adding comments.

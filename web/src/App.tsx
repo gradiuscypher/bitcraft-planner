@@ -19,6 +19,8 @@ import { SearchResults } from '@/pages/search-results'
 import { ItemDetail } from '@/pages/item-detail'
 import { LoginPage } from '@/pages/login'
 import { AuthCallback } from '@/pages/auth-callback'
+import { GroupsPage } from '@/pages/groups'
+import { GroupDetailPage } from '@/pages/group-detail'
 
 
 // Landing page component
@@ -156,6 +158,12 @@ function App() {
                         Recipe Explorer
                       </Link>
                     </Button>
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link to="/groups">
+                        <Users className="h-4 w-4 mr-2" />
+                        Groups
+                      </Link>
+                    </Button>
                   </div>
                 </div>
 
@@ -178,11 +186,13 @@ function App() {
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/search" element={<SearchResults />} />
-              <Route path="/item/:id" element={<ItemDetail />} />
-              <Route path="/building/:id" element={<ItemDetail />} />
-              <Route path="/cargo/:id" element={<ItemDetail />} />
+              <Route path="/item/:itemId" element={<ItemDetail />} />
+              <Route path="/building/:buildingId" element={<ItemDetail />} />
+              <Route path="/cargo/:cargoId" element={<ItemDetail />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/groups" element={<GroupsPage />} />
+              <Route path="/groups/:groupId" element={<GroupDetailPage />} />
             </Routes>
           </div>
         </Router>
