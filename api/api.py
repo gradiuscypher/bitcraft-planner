@@ -9,6 +9,7 @@ from database import init_database
 from routes.auth import auth
 from routes.groups import groups
 from routes.items import items
+from routes.projects import projects
 from settings import ENVIRONMENT, LOGFIRE_TOKEN, EnvironmentEnum
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,7 @@ else:
 app.include_router(auth)
 app.include_router(items)
 app.include_router(groups)
+app.include_router(projects)
 
 if __name__ == "__main__":
     import uvicorn

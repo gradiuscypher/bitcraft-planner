@@ -17,20 +17,36 @@ Routes for projects
 - add a group to a user
 """
 
-from auth import get_current_user
-from fastapi import APIRouter, Depends
+from typing import Annotated
 
-from models.projects import (
-    ProjectOrm,
-)
+from fastapi import APIRouter, Depends
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from database import get_db
+from models.projects import CreateProjectRequest, Project, ProjectOrm
 from models.users import UserOrm
+from routes.auth import get_current_user
 
 projects = APIRouter(prefix="/projects", tags=["projects"])
 
 # Regular project endpoints
 @projects.get("/")
-async def get_projects(current_user: UserOrm = Depends(get_current_user)):
-    return {"message": "Hello, World!"}
+async def get_projects(current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> list[Project]:
+    group_ids = [group.id for group in current_user.groups]
+    result = await db.execute(
+        select(ProjectOrm)
+        .where(
+            or_(
+                ProjectOrm.owner_id == current_user.id,
+                ProjectOrm.group_id.in_(group_ids),
+            ),
+        )
+        .options(selectinload(ProjectOrm.items)),
+    )
+    projects = result.scalars().all()
+    return [Project.model_validate(project) for project in projects]
 
 
 @projects.get("/{project_id}")
@@ -39,12 +55,20 @@ async def get_project(project_id: int, current_user: UserOrm = Depends(get_curre
 
 
 @projects.post("/")
-async def create_project(project: ProjectOrm, current_user: UserOrm = Depends(get_current_user)):
-    return {"message": "Hello, World!"}
+async def create_project(project: CreateProjectRequest, current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> Project:
+    project_orm = ProjectOrm(
+        name=project.name,
+        owner_id=current_user.id,
+        group_id=project.group_id,
+    )
+    db.add(project_orm)
+    await db.commit()
+    await db.refresh(project_orm)
+    return Project.model_validate(project_orm)
 
 
 @projects.put("/{project_id}")
-async def update_project(project_id: int, project: ProjectOrm, current_user: UserOrm = Depends(get_current_user)):
+async def update_project(project_id: int, project: Project, current_user: UserOrm = Depends(get_current_user)):
     return {"message": "Hello, World!"}
 
 

@@ -10,7 +10,8 @@ import {
   Hammer,
   BookOpen,
   Users,
-  Zap
+  Zap,
+  FolderOpen
 } from 'lucide-react'
 import { SearchDropdown } from '@/components/search-dropdown'
 import { UserNav } from '@/components/user-nav'
@@ -21,6 +22,7 @@ import { LoginPage } from '@/pages/login'
 import { AuthCallback } from '@/pages/auth-callback'
 import { GroupsPage } from '@/pages/groups'
 import { GroupDetailPage } from '@/pages/group-detail'
+import { ProjectsPage } from '@/pages/projects'
 
 
 // Landing page component
@@ -159,6 +161,12 @@ function App() {
                       </Link>
                     </Button>
                     <Button variant="ghost" size="sm" asChild>
+                      <Link to="/projects">
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                        Projects
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild>
                       <Link to="/groups">
                         <Users className="h-4 w-4 mr-2" />
                         Groups
@@ -191,6 +199,7 @@ function App() {
               <Route path="/cargo/:cargoId" element={<ItemDetail />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/groups" element={<GroupsPage />} />
               <Route path="/groups/:groupId" element={<GroupDetailPage />} />
             </Routes>

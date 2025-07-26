@@ -10,9 +10,10 @@ from itsdangerous import URLSafeTimedSerializer
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models.users import UserOrm
+from models.users import UserOrm, UserGroupMembership
 from settings import (
     DISCORD_CLIENT_ID,
     DISCORD_CLIENT_SECRET,
@@ -155,8 +156,14 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Get user from database
-    stmt = select(UserOrm).where(UserOrm.id == payload["user_id"])
+    # Get user from database with eagerly loaded group relationships
+    stmt = (
+        select(UserOrm)
+        .where(UserOrm.id == payload["user_id"])
+        .options(
+            selectinload(UserOrm.group_memberships).selectinload(UserGroupMembership.user_group)
+        )
+    )
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 

@@ -24,8 +24,7 @@ class UpdateGroup(BaseModel):
     name: str
 
 
-@groups.get("/", include_in_schema=False)
-@groups.get("")
+@groups.get("/")
 async def get_groups(
     current_user: Annotated[UserOrm, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],

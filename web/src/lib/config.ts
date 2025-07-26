@@ -23,6 +23,10 @@ export const API_ENDPOINTS = {
   GROUPS_BY_ID: (id: number) => `/groups/${id}`,
   GROUPS_ADD_USER: (groupId: number, discordId: string) => `/groups/${groupId}/users/${discordId}`,
   GROUPS_REMOVE_USER: (groupId: number, discordId: string) => `/groups/${groupId}/users/${discordId}`,
+  
+  // Projects endpoints
+  PROJECTS: '/projects/',
+  PROJECTS_BY_ID: (id: number) => `/projects/${id}`,
 } as const;
 
 export const LOCAL_STORAGE_KEYS = {
