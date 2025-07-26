@@ -19,7 +19,7 @@ Routes for projects
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -50,8 +50,20 @@ async def get_projects(current_user: Annotated[UserOrm, Depends(get_current_user
 
 
 @projects.get("/{project_id}")
-async def get_project(project_id: int, current_user: UserOrm = Depends(get_current_user)):
-    return {"message": "Hello, World!"}
+async def get_project(project_id: int, current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> Project:
+    result = await db.execute(
+        select(ProjectOrm)
+        .where(ProjectOrm.id == project_id)
+        .options(selectinload(ProjectOrm.items)),
+    )
+    project = result.scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not project.does_user_have_access(current_user.id):
+        raise HTTPException(status_code=403, detail="You do not have access to this project")
+
+    return Project.model_validate(project)
 
 
 @projects.post("/")
@@ -68,13 +80,28 @@ async def create_project(project: CreateProjectRequest, current_user: Annotated[
 
 
 @projects.put("/{project_id}")
-async def update_project(project_id: int, project: Project, current_user: UserOrm = Depends(get_current_user)):
-    return {"message": "Hello, World!"}
+async def update_project(project_id: int, project: CreateProjectRequest, current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> Project:
+    result = await db.execute(select(ProjectOrm).where(ProjectOrm.id == project_id))
+    project_orm = result.scalar_one_or_none()
+    if not project_orm:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not project_orm.does_user_have_access(current_user.id):
+        raise HTTPException(status_code=403, detail="You do not have access to this project")
+    project_orm.name = project.name
+    await db.commit()
 
 
 @projects.delete("/{project_id}")
-async def delete_project(project_id: int, current_user: UserOrm = Depends(get_current_user)):
-    return {"message": "Hello, World!"}
+async def delete_project(project_id: int, current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> None:
+    result = await db.execute(select(ProjectOrm).where(ProjectOrm.id == project_id))
+    project_orm = result.scalar_one_or_none()
+    if not project_orm:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not project_orm.does_user_have_access(current_user.id):
+        raise HTTPException(status_code=403, detail="You do not have access to this project")
+    await db.delete(project_orm)
+    await db.commit()
+
 
 # Group project endpoints
 @projects.post("/group/{group_id}/{project_id}")

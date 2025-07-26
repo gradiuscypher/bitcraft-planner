@@ -23,6 +23,7 @@ import { AuthCallback } from '@/pages/auth-callback'
 import { GroupsPage } from '@/pages/groups'
 import { GroupDetailPage } from '@/pages/group-detail'
 import { ProjectsPage } from '@/pages/projects'
+import { ProjectDetailPage } from '@/pages/project-detail'
 
 
 // Landing page component
@@ -200,6 +201,7 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
               <Route path="/groups" element={<GroupsPage />} />
               <Route path="/groups/:groupId" element={<GroupDetailPage />} />
             </Routes>

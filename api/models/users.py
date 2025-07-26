@@ -98,3 +98,6 @@ class UserGroupOrm(Base):
     @property
     def users(self) -> list[UserOrm]:
         return [membership.user for membership in self.user_memberships]
+
+    def is_user_in_group(self, user_id: int) -> bool:
+        return any(membership.user_id == user_id for membership in self.user_memberships)

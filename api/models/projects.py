@@ -25,6 +25,7 @@ class Project(BaseModel):
     group_id: int | None = None
     created_at: datetime
     updated_at: datetime
+    items: list["ProjectItem"] = []
 
 
 class ProjectItem(BaseModel):
@@ -55,7 +56,9 @@ class ProjectOrm(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
-    # Relationships
     owner: Mapped["UserOrm"] = relationship("UserOrm", back_populates="projects")
     group: Mapped["UserGroupOrm | None"] = relationship("UserGroupOrm", back_populates="projects")
     items: Mapped[list["ProjectItemOrm"]] = relationship("ProjectItemOrm", back_populates="project")
+
+    def does_user_have_access(self, user_id: int) -> bool:
+        return self.owner_id == user_id or (self.group_id is not None and self.group.is_user_in_group(user_id))

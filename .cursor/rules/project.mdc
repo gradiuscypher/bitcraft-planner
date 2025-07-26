@@ -16,14 +16,12 @@ This project uses the following tech stack, please use best practices when imple
 - Validate your changes with linters and tests where available
 - Ensure that all UI elements text match the light and dark themes
 - If you must run the webserver or the API server, just run `make` while in `web` or `api` directories
+- Keep code clean with proper whitespace formatting (no trailing spaces)
+- Validate API changes using linters and tests rather than running servers
+- Write minimal, focused code that is self-explanatory; add comments only for complex logic
 
 # Things you may do
 - You may install new Shadcn components
 - You may install new python libraries if needed
 - You may install new npm packages if needed
-
-# Things you must not do
-- You do not need to write documentation for the features you create
-- Do not try to run the project API or webserver. Validate your API changes via linters and testing.
-- Do not include unneeded blank spaces in lines. If a line is intended to be a new line, there should be no additional space or tab characters in that line.
-- Do not add comments unless the modifications you're making are significantly complex. If you're in doubt, default to not adding comments.
+- Add comments when implementing significantly complex modifications
