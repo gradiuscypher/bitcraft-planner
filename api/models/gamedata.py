@@ -16,8 +16,6 @@ class GameItemOrm(Base):
     volume: Mapped[int] = mapped_column(Integer)
     durability: Mapped[int] = mapped_column(Integer)
     icon_asset_name: Mapped[str] = mapped_column(String(255))
-    consumed_in_recipes: Mapped[list["GameItemRecipeConsumedOrm"]] = relationship("GameItemRecipeConsumedOrm", back_populates="consumed_item", cascade="all, delete-orphan")
-    produced_in_recipes: Mapped[list["GameItemRecipeProducedOrm"]] = relationship("GameItemRecipeProducedOrm", back_populates="produced_item", cascade="all, delete-orphan")
 
     @classmethod
     async def get_by_id(cls, item_id: int) -> "GameItemOrm":
@@ -31,21 +29,17 @@ class GameItemOrm(Base):
 class GameItemRecipeConsumedOrm(Base):
     __tablename__ = "game_item_recipe_consumed"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    consumed_item_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_items.id"), nullable=False)
+    item_id: Mapped[int] = mapped_column(Integer, nullable=False)
     recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_item_recipes.id"), nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
-    consumed_item: Mapped["GameItemOrm"] = relationship("GameItemOrm", back_populates="consumed_in_recipes")
-    recipe: Mapped["GameItemRecipeOrm"] = relationship("GameItemRecipeOrm", back_populates="consumed_items")
 
 
 class GameItemRecipeProducedOrm(Base):
     __tablename__ = "game_item_recipe_produced"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    produced_item_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_items.id"), nullable=False)
+    item_id: Mapped[int] = mapped_column(Integer, nullable=False)
     recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_item_recipes.id"), nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
-    produced_item: Mapped["GameItemOrm"] = relationship("GameItemOrm", back_populates="produced_in_recipes")
-    recipe: Mapped["GameItemRecipeOrm"] = relationship("GameItemRecipeOrm", back_populates="produced_items")
 
 
 class GameItemRecipeOrm(Base):
@@ -57,8 +51,8 @@ class GameItemRecipeOrm(Base):
     building_type_requirement: Mapped[int] = mapped_column(Integer, nullable=False)
     tool_tier_requirement: Mapped[int | None] = mapped_column(Integer)
     tool_type_requirement: Mapped[int | None] = mapped_column(Integer)
-    consumed_items: Mapped[list[GameItemRecipeConsumedOrm]] = relationship("GameItemRecipeConsumedOrm", back_populates="recipe", cascade="all, delete-orphan")
-    produced_items: Mapped[list[GameItemRecipeProducedOrm]] = relationship("GameItemRecipeProducedOrm", back_populates="recipe", cascade="all, delete-orphan")
+    consumed_items: Mapped[list["GameItemRecipeConsumedOrm"]] = relationship("GameItemRecipeConsumedOrm", cascade="all, delete-orphan")
+    produced_items: Mapped[list["GameItemRecipeProducedOrm"]] = relationship("GameItemRecipeProducedOrm", cascade="all, delete-orphan")
 
 
 class GameCargoOrm(Base):
@@ -97,87 +91,68 @@ async def init_game_data() -> None:
     _, item_by_id = load_item_descriptions()
 
     # fill out the item data
-    for item_id, item_obj in item_by_id.items():
-        skip_recipe = False
-        try:
-            item_recipes_for_item = item_recipes[item_id]
-        except KeyError:
-            skip_recipe = True
+    async with SessionLocal() as db:
+        for item_id, item_obj in item_by_id.items():
+            skip_recipe = False
+            try:
+                item_recipes_for_item = item_recipes[item_id]
+            except KeyError:
+                skip_recipe = True
 
-        # create the GameItemOrm first
-        item_orm = GameItemOrm(
-            item_id=item_id,
-            name=item_obj["name"],
-            description=item_obj["description"],
-            tier=item_obj["tier"],
-            rarity=item_obj["rarity"][0],
-            tag=item_obj["tag"],
-            volume=item_obj["volume"],
-            durability=item_obj["durability"],
-            icon_asset_name=item_obj["icon_asset_name"],
-        )
+            # create the GameItemOrm first
+            item_orm = GameItemOrm(
+                item_id=item_id,
+                name=item_obj["name"],
+                description=item_obj["description"],
+                tier=item_obj["tier"],
+                rarity=item_obj["rarity"][0],
+                tag=item_obj["tag"],
+                volume=item_obj["volume"],
+                durability=item_obj["durability"],
+                icon_asset_name=item_obj["icon_asset_name"],
+            )
 
-        async with SessionLocal() as db:
-            db.add(item_orm)
-            await db.commit()  # Commit item first to get the ID
-            await db.refresh(item_orm)  # Refresh to get the assigned ID
-
-            # add the GameItemRecipeOrm to the GameItemOrm after
             if not skip_recipe:
                 for recipe in item_recipes_for_item:
-                    time_requirement = recipe["time_requirement"]
-                    stamina_requirement = recipe["stamina_requirement"]
-                    building_tier_requirement = recipe["building_requirement"][1]["tier"]
-                    building_type_requirement = recipe["building_requirement"][1]["building_type"]
-
-                    tool_requirement = recipe.get("tool_requirement", [])
-                    tool_tier_requirement = tool_requirement[1] if tool_requirement else None
-                    tool_type_requirement = tool_requirement[0] if tool_requirement else None
+                    building_requirement = recipe.get("building_requirement", None)
+                    tool_requirement = recipe.get("tool_requirement", None)
+                    if building_requirement:
+                        building_tier_requirement = building_requirement[1]["tier"]
+                        building_type_requirement = building_requirement[1]["building_type"]
+                    else:
+                        building_tier_requirement = None
+                        building_type_requirement = None
+                    if tool_requirement:
+                        tool_type_requirement = tool_requirement[0][0]
+                        tool_tier_requirement = tool_requirement[0][1]
+                    else:
+                        tool_type_requirement = None
+                        tool_tier_requirement = None
 
                     recipe_orm = GameItemRecipeOrm(
-                        time_requirement=time_requirement,
-                        stamina_requirement=stamina_requirement,
+                        time_requirement=recipe["time_requirement"],
+                        stamina_requirement=recipe["stamina_requirement"],
                         building_tier_requirement=building_tier_requirement,
                         building_type_requirement=building_type_requirement,
                         tool_tier_requirement=tool_tier_requirement,
                         tool_type_requirement=tool_type_requirement,
                     )
 
+                    consumed_items = recipe.get("consumed_item_stacks", [])
+                    for consumed_item in consumed_items:
+                        consumed_item_orm = GameItemRecipeConsumedOrm(
+                            item_id=consumed_item[0],
+                            amount=consumed_item[1],
+                        )
+                        recipe_orm.consumed_items.append(consumed_item_orm)
+                    produced_items = recipe.get("crafted_item_stacks", [])
+                    for produced_item in produced_items:
+                        produced_item_orm = GameItemRecipeProducedOrm(
+                            item_id=produced_item[0],
+                            amount=produced_item[1],
+                        )
+                        recipe_orm.produced_items.append(produced_item_orm)
+
                     db.add(recipe_orm)
-                    await db.commit()  # Commit recipe to get the ID
-                    await db.refresh(recipe_orm)
-
-                    recipe_consumed_items = recipe.get("consumed_item_stacks", [])
-                    recipe_produced_items = recipe.get("crafted_item_stacks", [])
-
-                    for c_item in recipe_consumed_items:
-                        consumed_item_id = c_item[0]
-                        consumed_item_amount = c_item[1]
-                        consumed_item = await GameItemOrm.get_by_id(consumed_item_id)
-
-                        if consumed_item:
-                            consumed_orm = GameItemRecipeConsumedOrm(
-                                consumed_item_id=consumed_item.id,
-                                recipe_id=recipe_orm.id,
-                                amount=consumed_item_amount,
-                            )
-                            db.add(consumed_orm)
-
-                    for p_item in recipe_produced_items:
-                        produced_item_id = p_item[0]
-                        produced_item_amount = p_item[1]
-                        produced_item = await GameItemOrm.get_by_id(produced_item_id)
-
-                        if produced_item:
-                            produced_orm = GameItemRecipeProducedOrm(
-                                produced_item_id=produced_item.id,
-                                recipe_id=recipe_orm.id,
-                                amount=produced_item_amount,
-                            )
-                            db.add(produced_orm)
-
-                    await db.commit()
-
-    # fill out the cargo data
-
-    # fill out the building data
+            db.add(item_orm)
+        await db.commit()
