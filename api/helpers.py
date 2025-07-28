@@ -62,7 +62,10 @@ def load_item_recipes() -> dict[int, Any]:
             if crafted_item_stacks:
                 for crafted_item in crafted_item_stacks:
                     crafted_id = crafted_item[0]
-                    item_recipes[crafted_id] = recipe
+                    if crafted_id not in item_recipes:
+                        item_recipes[crafted_id] = [recipe]
+                    else:
+                        item_recipes[crafted_id].append(recipe)
     return item_recipes
 
 
