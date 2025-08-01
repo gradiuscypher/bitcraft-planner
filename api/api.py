@@ -1,9 +1,12 @@
 import logging
+import traceback
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from database import init_database
 from routes.auth import auth
@@ -25,6 +28,62 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(lifespan=lifespan)
+
+# ref: https://github.com/tiangolo/fastapi/discussions/6678
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError,
+) -> JSONResponse:
+    exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
+
+    # Enhanced logging with more details
+    logger.error("Validation Error - URL: %s", request.url)
+    logger.error("Method: %s", request.method)
+    logger.error("Path Parameters: %s", request.path_params)
+    logger.error("Query Parameters: %s", dict(request.query_params))
+    logger.error("Headers: %s", dict(request.headers))
+    logger.error("Exception Details: %s", exc_str)
+    logger.error("Raw Exception: %s", exc)
+
+    # More detailed error response
+    content = {
+        "status_code": 10422,
+        "message": exc_str,
+        "url": str(request.url),
+        "method": request.method,
+        "errors": exc.errors(),
+        "data": None,
+    }
+    return JSONResponse(
+        content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Handle all other unhandled exceptions with detailed logging"""
+    logger.error("Unhandled Exception - URL: %s", request.url)
+    logger.error("Method: %s", request.method)
+    logger.error("Path Parameters: %s", request.path_params)
+    logger.error("Query Parameters: %s", dict(request.query_params))
+    logger.error("Exception Type: %s", type(exc).__name__)
+    logger.error("Exception Message: %s", str(exc))
+    logger.error("Traceback:\n%s", traceback.format_exc())
+
+    content = {
+        "status_code": 500,
+        "message": "Internal server error",
+        "url": str(request.url),
+        "method": request.method,
+        "exception_type": type(exc).__name__,
+        "data": None,
+    }
+
+    return JSONResponse(
+        content=content,
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+
 
 # Configure CORS based on environment
 if ENVIRONMENT == EnvironmentEnum.PROD:

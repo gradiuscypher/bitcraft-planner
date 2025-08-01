@@ -2,6 +2,7 @@
 Crafting planner for Bitcraft Online
 
 # Working on
+- Alerting system for completed crafting stations, character not crafting, etc
 - Clean up TODO
 - Don't enable logger in dev
 - Start over with groups / projects models and endpoints, something's defintely gotten too complex

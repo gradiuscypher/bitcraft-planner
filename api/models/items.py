@@ -1,25 +1,21 @@
 from typing import Any
 
-from pydantic import BaseModel
-
-from helpers import (
-    load_building_descriptions,
-    load_cargo_descriptions,
-    load_item_descriptions,
-    load_item_recipes,
-    load_skill_descriptions,
-    load_tool_descriptions,
-)
-
-# Module-level cache for all items
-_all_items_cache: dict[int, "Item"] | None = None
+from pydantic import BaseModel, ConfigDict
 
 
-class RecipeItem(BaseModel):
-    """Lightweight item representation for recipes - just the essential information"""
-    id: int
-    name: str
-    count: int
+class ConsumedItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    item_id: int
+    amount: int
+    recipe_id: int
+
+
+class ProducedItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    item_id: int
+    recipe_id: int
+    amount: int
+
 
 
 class ToolRequirement(BaseModel):
@@ -29,31 +25,11 @@ class ToolRequirement(BaseModel):
     tool_name: str
     tier: int
 
-    @staticmethod
-    def tool_requirement(tool_id: int, tier: int) -> "ToolRequirement":
-        tool_descriptions = load_tool_descriptions()
-        tool_requirement_json = tool_descriptions[tool_id]
-        return ToolRequirement(
-            tool_id=tool_requirement_json["id"],
-            tool_name=tool_requirement_json["name"],
-            tier=tier,
-        )
-
 
 class BuildingRequirement(BaseModel):
     building_id: int
     building_name: str  # Changed from int to str
     tier: int
-
-    @staticmethod
-    def building_requirement(building_id: int, tier: int) -> "BuildingRequirement":
-        building_descriptions = load_building_descriptions()
-        building_requirement_json = building_descriptions[building_id]
-        return BuildingRequirement(
-            building_id=building_requirement_json["id"],
-            building_name=building_requirement_json["name"],
-            tier=tier,
-        )
 
 
 class ExperiencePerProgress(BaseModel):
@@ -62,27 +38,10 @@ class ExperiencePerProgress(BaseModel):
     skill_name: str
     experience_per_level: float
 
-    @staticmethod
-    def experience_per_progress(skill_id: int, experience_per_level: float) -> "ExperiencePerProgress":
-        skill_descriptions = load_skill_descriptions()
-        skill_requirement_json = skill_descriptions[skill_id]
-        return ExperiencePerProgress(
-            skill_name=skill_requirement_json["name"],
-            experience_per_level=experience_per_level,
-        )
 
 class LevelRequirement(BaseModel):
     skill_name: str
     level: int
-
-    @staticmethod
-    def level_requirement(skill_id: int, level: int) -> "LevelRequirement":
-        skill_descriptions = load_skill_descriptions()
-        skill_requirement_json = skill_descriptions[skill_id]
-        return LevelRequirement(
-            skill_name=skill_requirement_json["name"],
-            level=level,
-        )
 
 
 class ItemRecipe(BaseModel):
@@ -112,93 +71,17 @@ class ItemRecipe(BaseModel):
         'allow_use_hands': False,
         'is_passive': False}
     """
+    model_config = ConfigDict(from_attributes=True)
     id: int
-    name: str
-    time_requirement: float
-    stamina_requirement: float
-    tool_durability_lost: int
-    building_requirement: BuildingRequirement
-    level_requirements: list[LevelRequirement]
-    tool_requirements: list[ToolRequirement]
-    consumed_items: list[RecipeItem]
-    experience_per_progress: list[ExperiencePerProgress]
-    crafted_items: list[RecipeItem]
     actions_required: int
-    tool_mesh_index: int
-    is_passive: bool
-
-    @staticmethod
-    def item_recipe(item_id: int) -> "ItemRecipe | None":
-        item_recipes = load_item_recipes()
-
-        try:
-            recipe_json = item_recipes[item_id]
-        except KeyError:
-            return None
-
-        # Load item descriptions to get item names
-        _, item_descriptions = load_item_descriptions()
-
-        tool_requirements = []
-        for tool_id, tier, _ in recipe_json["tool_requirements"]:
-            tool_requirements.append(ToolRequirement.tool_requirement(tool_id, tier))
-
-        level_requirements = []
-        for skill_id, level in recipe_json["level_requirements"]:
-            level_requirements.append(LevelRequirement.level_requirement(skill_id, level))
-
-        consumed_items = []
-        for item in recipe_json["consumed_item_stacks"]:
-            item_id = item[0]
-            item_count = item[1]
-            # Get item name from descriptions
-            item_name = item_descriptions.get(item_id, {}).get("name", f"Unknown Item {item_id}")
-            consumed_items.append(RecipeItem(id=item_id, name=item_name, count=item_count))
-
-        crafted_items = []
-        for item in recipe_json["crafted_item_stacks"]:
-            item_id = item[0]
-            item_count = item[1]
-            # Get item name from descriptions
-            item_name = item_descriptions.get(item_id, {}).get("name", f"Unknown Item {item_id}")
-            crafted_items.append(RecipeItem(id=item_id, name=item_name, count=item_count))
-
-        experience_per_progress = []
-        for skill_id, experience in recipe_json["experience_per_progress"]:
-            experience_per_progress.append(ExperiencePerProgress.experience_per_progress(skill_id, experience))
-
-        # Handle building requirement parsing - it can be different formats
-        building_req = recipe_json["building_requirement"]
-        if isinstance(building_req, list) and len(building_req) > 1:
-            building_info = building_req[1]
-            if isinstance(building_info, dict):
-                building_requirement = BuildingRequirement.building_requirement(
-                    building_info["building_type"],
-                    building_info["tier"],
-                )
-            else:
-                # If second element is not a dict, use defaults
-                building_requirement = BuildingRequirement.building_requirement(0, 1)
-        else:
-            # Use defaults for unknown formats
-            building_requirement = BuildingRequirement.building_requirement(0, 1)
-
-        return ItemRecipe(
-            id=recipe_json["id"],
-            name=recipe_json["name"],
-            time_requirement=recipe_json["time_requirement"],
-            stamina_requirement=recipe_json["stamina_requirement"],
-            tool_durability_lost=recipe_json["tool_durability_lost"],
-            building_requirement=building_requirement,
-            level_requirements=level_requirements,
-            tool_requirements=tool_requirements,
-            consumed_items=consumed_items,
-            experience_per_progress=experience_per_progress,
-            crafted_items=crafted_items,
-            actions_required=recipe_json["actions_required"],
-            tool_mesh_index=recipe_json["tool_mesh_index"],
-            is_passive=recipe_json["is_passive"],
-        )
+    building_tier_requirement: int
+    building_type_requirement: int
+    consumed_items: list[ConsumedItem]
+    produced_items: list[ProducedItem]
+    stamina_requirement: float
+    time_requirement: float
+    tool_tier_requirement: int | None
+    tool_type_requirement: int | None
 
 
 class Item(BaseModel):
@@ -219,72 +102,16 @@ class Item(BaseModel):
         'compendium_entry': True,
         'item_list_id': 0}
     """
+    model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
     description: str
     volume: int
     durability: int
-    model_asset_name: str
     icon_asset_name: str
     tier: int
     tag: str
     recipe: ItemRecipe | None = None
-
-    def get_recipe(self) -> ItemRecipe | None:
-        """Lazy load the recipe for this item"""
-        if self.recipe is None:
-            self.recipe = ItemRecipe.item_recipe(self.id)
-        return self.recipe
-
-    def get_consumed_items(self) -> list[RecipeItem]:
-        """Get the items consumed by this item's recipe"""
-        recipe = self.get_recipe()
-        if recipe is None:
-            return []
-        return recipe.consumed_items
-
-    def get_crafted_items(self) -> list[RecipeItem]:
-        """Get the items crafted by this item's recipe"""
-        recipe = self.get_recipe()
-        if recipe is None:
-            return []
-        return recipe.crafted_items
-
-    @staticmethod
-    def all_items() -> dict[int, "Item"]:
-        # Use cached result if available
-        global _all_items_cache
-        if _all_items_cache is not None:
-            return _all_items_cache
-
-        items_by_id: dict[int, Item] = {}
-        _, item_descriptions = load_item_descriptions()
-
-        for item_id, item_obj in item_descriptions.items():
-            # Don't load recipes upfront - they'll be loaded lazily when needed
-            new_item = Item(
-                id=item_id,
-                name=item_obj["name"],
-                description=item_obj["description"],
-                volume=item_obj["volume"],
-                durability=item_obj["durability"],
-                model_asset_name=item_obj["model_asset_name"],
-                icon_asset_name=item_obj["icon_asset_name"],
-                tier=item_obj["tier"],
-                tag=item_obj["tag"],
-                recipe=None,  # Will be loaded lazily
-            )
-            items_by_id[item_id] = new_item
-
-        # Cache the result
-        _all_items_cache = items_by_id
-        return items_by_id
-
-    @staticmethod
-    def clear_cache() -> None:
-        """Clear the cached items (useful for testing or if data changes)"""
-        global _all_items_cache
-        _all_items_cache = None
 
 
 class BuildingRecipe(BaseModel):
@@ -391,10 +218,6 @@ class Building(BaseModel):
     not_deconstructible: bool
     recipe: BuildingRecipe
 
-    @classmethod
-    def building_lookup(cls) -> dict[int, "Building"]:
-        return {}
-
 
 class Cargo(BaseModel):
     """
@@ -447,36 +270,3 @@ class Cargo(BaseModel):
     rarity: list[Any]
     not_pickupable: bool
     recipe: ItemRecipe | None = None
-
-    @staticmethod
-    def all_cargo() -> dict[int, "Cargo"]:
-        cargo_results = {}
-        cargo_by_name, cargo_by_id = load_cargo_descriptions()
-        for cargo_id, cargo in cargo_by_id.items():
-            cargo_results[cargo_id] = Cargo(
-                id=cargo["id"],
-                name=cargo["name"],
-                description=cargo["description"],
-                volume=cargo["volume"],
-                secondary_knowledge_id=cargo["secondary_knowledge_id"],
-                model_asset_name=cargo["model_asset_name"],
-                icon_asset_name=cargo["icon_asset_name"],
-                carried_model_asset_name=cargo["carried_model_asset_name"],
-                pick_up_animation_start=cargo["pick_up_animation_start"],
-                pick_up_animation_end=cargo["pick_up_animation_end"],
-                drop_animation_start=cargo["drop_animation_start"],
-                drop_animation_end=cargo["drop_animation_end"],
-                pick_up_time=cargo["pick_up_time"],
-                place_time=cargo["place_time"],
-                animator_state=cargo["animator_state"],
-                movement_modifier=cargo["movement_modifier"],
-                blocks_path=cargo["blocks_path"],
-                on_destroy_yield_cargos=cargo["on_destroy_yield_cargos"],
-                despawn_time=cargo["despawn_time"],
-                tier=cargo["tier"],
-                tag=cargo["tag"],
-                rarity=cargo["rarity"],
-                not_pickupable=cargo["not_pickupable"],
-                recipe=ItemRecipe.item_recipe(cargo["id"]),
-            )
-        return cargo_results
