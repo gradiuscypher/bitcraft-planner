@@ -376,7 +376,11 @@ async def init_game_data() -> None:
 
         for building_recipe_id, building_recipe_obj in building_recipes.items():
             # TODO: fill out the building recipe data, move all DB creation into single function
-            level_requirements = None
+            level_requirements = GameBuildingRecipeLevelRequirementOrm(
+                building_recipe_id=building_recipe_id,
+                level=building_recipe_obj["level_requirements"][0][0],
+                skill_id=building_recipe_obj["level_requirements"][0][1],
+            )
             tool_requirements = None
             consumed_item_stacks = None
             consumed_cargo_stacks = None
