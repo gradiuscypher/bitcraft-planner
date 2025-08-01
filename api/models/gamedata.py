@@ -375,7 +375,7 @@ async def init_game_data() -> None:
             db.add(building_orm)
 
         for building_recipe_id, building_recipe_obj in building_recipes.items():
-            # TODO: fill out the building recipe data
+            # TODO: fill out the building recipe data, move all DB creation into single function
             level_requirements = None
             tool_requirements = None
             consumed_item_stacks = None
