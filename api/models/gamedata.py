@@ -1,5 +1,5 @@
 from rapidfuzz import fuzz, process
-from sqlalchemy import Float, ForeignKey, Integer, String, Text, select, text
+from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, Text, select, text
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
 
@@ -91,16 +91,74 @@ class GameCargoOrm(Base):
     volume: Mapped[int] = mapped_column(Integer)
 
 
-class GameBuildingOrm(Base):
-    __tablename__ = "game_buildings"
+class GameBuildingTypeOrm(Base):
+    __tablename__ = "game_building_types"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     building_id: Mapped[int] = mapped_column(Integer, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[int] = mapped_column(Integer, nullable=False)
 
+
+class GameBuildingRecipeLevelRequirementOrm(Base):
+    __tablename__ = "game_building_recipe_level_requirements"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    building_recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_building_recipes.id"), nullable=False)
+    level: Mapped[int] = mapped_column(Integer, nullable=False)
+    skill_id: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class GameBuildingRecipeToolRequirementOrm(Base):
+    __tablename__ = "game_building_recipe_tool_requirements"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    building_recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_building_recipes.id"), nullable=False)
+    tool_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    tool_tier: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class GameBuildingRecipeConsumedItemOrm(Base):
+    __tablename__ = "game_building_recipe_consumed_items"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    building_recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_building_recipes.id"), nullable=False)
+    item_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class GameBuildingRecipeConsumedCargoOrm(Base):
+    __tablename__ = "game_building_recipe_consumed_cargos"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    building_recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_building_recipes.id"), nullable=False)
+    cargo_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+class GameBuildingExperiencePerProgressOrm(Base):
+    __tablename__ = "game_building_recipe_experience_per_progress"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    building_recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_building_recipes.id"), nullable=False)
+    skill_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    experience: Mapped[float] = mapped_column(Float, nullable=False)
 
 class GameBuildingRecipeOrm(Base):
     __tablename__ = "game_building_recipes"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    time_requirement: Mapped[float] = mapped_column(Float, nullable=False)
+    stamina_requirement: Mapped[float] = mapped_column(Float, nullable=False)
+    consumed_building: Mapped[int] = mapped_column(Integer, nullable=False)
+    required_interior_tier: Mapped[int] = mapped_column(Integer, nullable=False)
+    level_requirements: Mapped[list["GameBuildingRecipeLevelRequirementOrm"]] = relationship("GameBuildingRecipeLevelRequirementOrm", cascade="all, delete-orphan")
+    tool_requirements: Mapped[list["GameBuildingRecipeToolRequirementOrm"]] = relationship("GameBuildingRecipeToolRequirementOrm", cascade="all, delete-orphan")
+    consumed_item_stacks: Mapped[list["GameBuildingRecipeConsumedItemOrm"]] = relationship("GameBuildingRecipeConsumedItemOrm", cascade="all, delete-orphan")
+    consumed_cargo_stacks: Mapped[list["GameBuildingRecipeConsumedCargoOrm"]] = relationship("GameBuildingRecipeConsumedCargoOrm", cascade="all, delete-orphan")
+    experience_per_progress: Mapped[list["GameBuildingExperiencePerProgressOrm"]] = relationship("GameBuildingExperiencePerProgressOrm", cascade="all, delete-orphan")
+    consumed_shards: Mapped[int] = mapped_column(Integer, nullable=False)
+    required_claim_tech_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    full_discovery_score: Mapped[int] = mapped_column(Integer, nullable=False)
+    tool_mesh_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    building_description_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    required_paving_tier: Mapped[int] = mapped_column(Integer, nullable=False)
+    actions_required: Mapped[int] = mapped_column(Integer, nullable=False)
+    instantly_built: Mapped[bool] = mapped_column(Boolean, nullable=False)
 
 
 class SearchResult:
@@ -224,6 +282,7 @@ class SearchService:
 async def init_game_data() -> None:
     from database import SessionLocal  # noqa: PLC0415
     from helpers import (  # noqa: F401, PLC0415
+        load_building_descriptions,
         load_building_recipes,
         load_item_descriptions,
         load_item_recipes,
@@ -231,6 +290,8 @@ async def init_game_data() -> None:
 
     item_recipes = load_item_recipes()
     _, item_by_id = load_item_descriptions()
+    _, building_recipes = load_building_recipes()
+    building_descriptions = load_building_descriptions()
     await create_fts_tables()
 
     # fill out the item data
@@ -301,6 +362,52 @@ async def init_game_data() -> None:
                     db.add(recipe_orm)
             db.add(item_orm)
         await db.commit()
+
+
+    # fill out the building data
+    async with SessionLocal() as db:
+        for building_id, building_obj in building_descriptions.items():
+            building_orm = GameBuildingTypeOrm(
+                building_id=building_id,
+                name=building_obj["name"],
+                category=building_obj["category"],
+            )
+            db.add(building_orm)
+
+        for building_recipe_id, building_recipe_obj in building_recipes.items():
+            # TODO: fill out the building recipe data
+            level_requirements = None
+            tool_requirements = None
+            consumed_item_stacks = None
+            consumed_cargo_stacks = None
+            experience_per_progress = None
+
+            building_recipe_orm = GameBuildingRecipeOrm(
+                id=building_recipe_id,
+                name=building_recipe_obj["name"],
+                time_requirement=building_recipe_obj["time_requirement"],
+                stamina_requirement=building_recipe_obj["stamina_requirement"],
+                consumed_building=building_recipe_obj["consumed_building"],
+                required_interior_tier=building_recipe_obj["required_interior_tier"],
+                level_requirements=level_requirements,
+                tool_requirements=tool_requirements,
+                consumed_item_stacks=consumed_item_stacks,
+                consumed_cargo_stacks=consumed_cargo_stacks,
+                experience_per_progress=experience_per_progress,
+                consumed_shards=building_recipe_obj["consumed_shards"],
+                required_claim_tech_id=building_recipe_obj["required_claim_tech_id"],
+                full_discovery_score=building_recipe_obj["full_discovery_score"],
+                tool_mesh_index=building_recipe_obj["tool_mesh_index"],
+                building_description_id=building_recipe_obj["building_description_id"],
+                required_paving_tier=building_recipe_obj["required_paving_tier"],
+                actions_required=building_recipe_obj["actions_required"],
+                instantly_built=building_recipe_obj["instantly_built"],
+            )
+            db.add(building_recipe_orm)
+
+        await db.commit()
+
+
 
 
 async def create_fts_tables() -> None:

@@ -94,10 +94,14 @@ async def get_item_recipe(item_id: int) -> list[ItemRecipe]:
 
     return results
 
-# @items.get("/building/{building_id}")
-# async def get_building(building_id: int) -> dict[str, Any]:
-#     """Get building by ID"""
-#     return buildings_by_id[building_id]
+
+@items.get("/building/{building_id}")
+async def get_building(building_id: int) -> Building:
+    """Get building by ID"""
+    building = await GameBuildingOrm.get_by_id(building_id)
+    if not building:
+        raise HTTPException(status_code=404, detail="Building not found")
+    return building
 
 
 # @items.get("/cargo/{item_id}")
@@ -108,7 +112,6 @@ async def get_item_recipe(item_id: int) -> list[ItemRecipe]:
 #     cargo = all_cargo[item_id]
 #     cargo.recipe = ItemRecipe.item_recipe(item_id)
 #     return cargo
-
 
 
 # @items.get("/search/buildings")

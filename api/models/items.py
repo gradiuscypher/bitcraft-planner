@@ -28,7 +28,7 @@ class ToolRequirement(BaseModel):
 
 class BuildingRequirement(BaseModel):
     building_id: int
-    building_name: str  # Changed from int to str
+    building_name: str
     tier: int
 
 
@@ -42,6 +42,13 @@ class ExperiencePerProgress(BaseModel):
 class LevelRequirement(BaseModel):
     skill_name: str
     level: int
+
+
+class BuildingType(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    category: int
 
 
 class ItemRecipe(BaseModel):
