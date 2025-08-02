@@ -1,9 +1,11 @@
+import asyncio
+
 from rapidfuzz import fuzz, process
 from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, Text, select, text
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
 
-from database import AsyncSession, Base, SessionLocal
+from database import init_database, AsyncSession, Base, SessionLocal
 
 
 class GameItemOrm(Base):
@@ -281,7 +283,7 @@ class SearchService:
 
 async def init_game_data() -> None:
     from database import SessionLocal  # noqa: PLC0415
-    from helpers import (  # noqa: F401, PLC0415
+    from helpers import (  # noqa: PLC0415
         load_building_descriptions,
         load_building_recipes,
         load_item_descriptions,
@@ -375,16 +377,35 @@ async def init_game_data() -> None:
             db.add(building_orm)
 
         for building_recipe_id, building_recipe_obj in building_recipes.items():
-            # TODO: fill out the building recipe data, move all DB creation into single function
-            level_requirements = GameBuildingRecipeLevelRequirementOrm(
+            level_requirements = [GameBuildingRecipeLevelRequirementOrm(
                 building_recipe_id=building_recipe_id,
                 level=building_recipe_obj["level_requirements"][0][0],
                 skill_id=building_recipe_obj["level_requirements"][0][1],
-            )
-            tool_requirements = None
-            consumed_item_stacks = None
-            consumed_cargo_stacks = None
-            experience_per_progress = None
+            )]
+
+            tool_requirements = [GameBuildingRecipeToolRequirementOrm(
+                building_recipe_id=building_recipe_id,
+                tool_id=building_recipe_obj["tool_requirements"][0][0],
+                tool_tier=building_recipe_obj["tool_requirements"][0][1],
+            )]
+
+            consumed_item_stacks = [GameBuildingRecipeConsumedItemOrm(
+                building_recipe_id=building_recipe_id,
+                item_id=consumed_item[0],
+                amount=consumed_item[1],
+            ) for consumed_item in building_recipe_obj["consumed_item_stacks"]]
+
+            consumed_cargo_stacks = [GameBuildingRecipeConsumedCargoOrm(
+                building_recipe_id=building_recipe_id,
+                cargo_id=consumed_cargo[0],
+                amount=consumed_cargo[1],
+            ) for consumed_cargo in building_recipe_obj["consumed_cargo_stacks"]]
+
+            experience_per_progress = [GameBuildingExperiencePerProgressOrm(
+                building_recipe_id=building_recipe_id,
+                skill_id=experience_per_progress[0],
+                experience=experience_per_progress[1],
+            ) for experience_per_progress in building_recipe_obj["experience_per_progress"]]
 
             building_recipe_orm = GameBuildingRecipeOrm(
                 id=building_recipe_id,
@@ -410,8 +431,6 @@ async def init_game_data() -> None:
             db.add(building_recipe_orm)
 
         await db.commit()
-
-
 
 
 async def create_fts_tables() -> None:
@@ -467,3 +486,9 @@ async def create_fts_tables() -> None:
 
         # Commit the changes
         await conn.commit()
+
+
+def build_everything() -> None:
+    asyncio.run(init_database())
+    asyncio.run(init_game_data())
+    asyncio.run(create_fts_tables())
