@@ -52,6 +52,13 @@ async def init_database() -> None:
     """Initialize database tables if they don't exist"""
     # Import models to ensure they're registered with Base
     from models.gamedata import (  # noqa: F401, PLC0415
+        GameBuildingExperiencePerProgressOrm,
+        GameBuildingRecipeConsumedCargoOrm,
+        GameBuildingRecipeConsumedItemOrm,
+        GameBuildingRecipeLevelRequirementOrm,
+        GameBuildingRecipeOrm,
+        GameBuildingRecipeToolRequirementOrm,
+        GameBuildingTypeOrm,
         GameCargoOrm,
         GameItemOrm,
         GameItemRecipeOrm,

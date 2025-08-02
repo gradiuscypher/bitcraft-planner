@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Annotated
 
@@ -7,7 +8,6 @@ from pydantic import BaseModel
 from database import AsyncSession, get_db
 from models.gamedata import (
     GameItemOrm,
-    GameItemRecipeConsumedOrm,
     GameItemRecipeOrm,
     GameItemRecipeProducedOrm,
     SearchService,
@@ -30,6 +30,13 @@ class SearchResponse(BaseModel):
     results: list[SearchResult]
     query: str
     search_type: str
+
+
+class SearchAllResponse(BaseModel):
+    items: list[SearchResult]
+    buildings: list[SearchResult]
+    cargo: list[SearchResult]
+    query: str
 
 
 @items.get("/")
@@ -95,64 +102,154 @@ async def get_item_recipe(item_id: int) -> list[ItemRecipe]:
     return results
 
 
-@items.get("/building/{building_id}")
-async def get_building(building_id: int) -> Building:
-    """Get building by ID"""
-    building = await GameBuildingOrm.get_by_id(building_id)
-    if not building:
-        raise HTTPException(status_code=404, detail="Building not found")
-    return building
+@items.get("/search/buildings")
+async def search_buildings(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    query: str,
+    limit: int = 5,
+    score_cutoff: float = 60.0,
+) -> SearchResponse:
+    """Search for buildings using hybrid FTS + fuzzy matching"""
+    search_service = SearchService(db)
+    search_results = await search_service.search_buildings(query, limit, score_cutoff)
 
+    # Convert gamedata SearchResult objects to Pydantic SearchResult models
+    results = [
+        SearchResult(
+            name=result.name,
+            score=result.score,
+            id=result.id,
+            type=result.type,
+        )
+        for result in search_results
+    ]
 
-# @items.get("/cargo/{item_id}")
-# async def get_cargo(item_id: int) -> Cargo:
-#     """Get cargo by ID"""
-#     if item_id not in all_cargo:
-#         raise HTTPException(status_code=404, detail="Cargo not found")
-#     cargo = all_cargo[item_id]
-#     cargo.recipe = ItemRecipe.item_recipe(item_id)
-#     return cargo
+    return SearchResponse(
+        results=results,
+        query=query,
+        search_type="buildings",
+    )
 
+@items.get("/search/cargo")
+async def search_cargo(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    query: str,
+    limit: int = 5,
+    score_cutoff: float = 60.0,
+) -> SearchResponse:
+    """Search for cargo using hybrid FTS + fuzzy matching"""
+    search_service = SearchService(db)
+    search_results = await search_service.search_cargo(query, limit, score_cutoff)
 
-# @items.get("/search/buildings")
-# async def search_buildings(query: str, limit: int = 5, score_cutoff: float = 60.0) -> SearchResponse:
-#     """Search for buildings using fuzzy matching"""
-#     results = fuzzy_search_buildings(query, limit, score_cutoff)
-#     return SearchResponse(
-#         results=[SearchResult(name=name, score=score, id=building_id, type="building") for name, score, building_id in results],
-#         query=query,
-#         search_type="buildings",
-#     )
+    # Convert gamedata SearchResult objects to Pydantic SearchResult models
+    results = [
+        SearchResult(
+            name=result.name,
+            score=result.score,
+            id=result.id,
+            type=result.type,
+        )
+        for result in search_results
+    ]
 
-# @items.get("/search/cargo")
-# async def search_cargo(query: str, limit: int = 5, score_cutoff: float = 60.0) -> SearchResponse:
-#     """Search for cargo using fuzzy matching"""
-#     results = fuzzy_search_cargo(query, limit, score_cutoff)
-#     return SearchResponse(
-#         results=[SearchResult(name=name, score=score, id=cargo_id, type="cargo") for name, score, cargo_id in results],
-#         query=query,
-#         search_type="cargo",
-#     )
+    return SearchResponse(
+        results=results,
+        query=query,
+        search_type="cargo",
+    )
 
-# @items.get("/search/all")
-# async def search_all(query: str, limit: int = 5, score_cutoff: float = 60.0) -> dict:
-#     """Search across all categories using fuzzy matching"""
-#     results = fuzzy_search_all(query, limit, score_cutoff)
-#     return {
-#         "query": query,
-#         "items": [SearchResult(name=name, score=score, id=item_id, type="item") for name, score, item_id in results["items"]],
-#         "buildings": [SearchResult(name=name, score=score, id=building_id, type="building") for name, score, building_id in results["buildings"]],
-#         "cargo": [SearchResult(name=name, score=score, id=cargo_id, type="cargo") for name, score, cargo_id in results["cargo"]],
-#     }
+@items.get("/search/all")
+async def search_all(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    query: str,
+    limit: int = 5,
+    score_cutoff: float = 60.0,
+) -> SearchAllResponse:
+    """Search across all categories using hybrid FTS + fuzzy matching"""
+    search_service = SearchService(db)
 
-# @items.get("/search/best")
-# async def get_best_match_endpoint(query: str, search_type: str = "all") -> SearchResult | None:
-#     """Get the single best match across specified search type"""
-#     if search_type not in ["items", "buildings", "cargo", "all"]:
-#         raise HTTPException(status_code=400, detail="search_type must be one of: items, buildings, cargo, all")
+    # Perform searches across all categories in parallel
+    items_results, buildings_results, cargo_results = await asyncio.gather(
+        search_service.search_items(query, limit, score_cutoff),
+        search_service.search_buildings(query, limit, score_cutoff),
+        search_service.search_cargo(query, limit, score_cutoff),
+    )
 
-#     result = get_best_match(query, search_type)
-#     if result:
-#         name, score, item_id, match_type = result
-#         return SearchResult(name=name, score=score, id=item_id, type=match_type)
-#     return None
+    # Convert gamedata SearchResult objects to Pydantic SearchResult models
+    items = [
+        SearchResult(
+            name=result.name,
+            score=result.score,
+            id=result.id,
+            type=result.type,
+        )
+        for result in items_results
+    ]
+
+    buildings = [
+        SearchResult(
+            name=result.name,
+            score=result.score,
+            id=result.id,
+            type=result.type,
+        )
+        for result in buildings_results
+    ]
+
+    cargo = [
+        SearchResult(
+            name=result.name,
+            score=result.score,
+            id=result.id,
+            type=result.type,
+        )
+        for result in cargo_results
+    ]
+
+    return SearchAllResponse(
+        items=items,
+        buildings=buildings,
+        cargo=cargo,
+        query=query,
+    )
+
+@items.get("/search/best")
+async def get_best_match_endpoint(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    query: str,
+    search_type: str = "all",
+) -> SearchResult | None:
+    """Get the single best match across specified search type"""
+    if search_type not in ["items", "buildings", "cargo", "all"]:
+        raise HTTPException(status_code=400, detail="search_type must be one of: items, buildings, cargo, all")
+
+    search_service = SearchService(db)
+    best_result = None
+    best_score = 0.0
+
+    if search_type in ["items", "all"]:
+        items_results = await search_service.search_items(query, 1, 0.0)
+        if items_results and items_results[0].score > best_score:
+            best_result = items_results[0]
+            best_score = items_results[0].score
+
+    if search_type in ["buildings", "all"]:
+        buildings_results = await search_service.search_buildings(query, 1, 0.0)
+        if buildings_results and buildings_results[0].score > best_score:
+            best_result = buildings_results[0]
+            best_score = buildings_results[0].score
+
+    if search_type in ["cargo", "all"]:
+        cargo_results = await search_service.search_cargo(query, 1, 0.0)
+        if cargo_results and cargo_results[0].score > best_score:
+            best_result = cargo_results[0]
+            best_score = cargo_results[0].score
+
+    if best_result:
+        return SearchResult(
+            name=best_result.name,
+            score=best_result.score,
+            id=best_result.id,
+            type=best_result.type,
+        )
+    return None

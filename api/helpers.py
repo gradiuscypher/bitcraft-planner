@@ -25,7 +25,7 @@ def load_building_recipes() -> tuple[dict[str, Any], dict[int, Any]]:
         building_recipes = json.load(f)
         for b in building_recipes:
             buildings_by_name[b["name"]] = b
-            buildings_by_id[b["building_description_id"]] = b
+            buildings_by_id[b["id"]] = b
         return buildings_by_name, buildings_by_id
 
 

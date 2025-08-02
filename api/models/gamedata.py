@@ -1,11 +1,10 @@
-import asyncio
 
 from rapidfuzz import fuzz, process
 from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, Text, select, text
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
 
-from database import init_database, AsyncSession, Base, SessionLocal
+from database import AsyncSession, Base, SessionLocal, init_database
 
 
 class GameItemOrm(Base):
@@ -276,9 +275,197 @@ class SearchService:
 
     async def search_buildings(self, query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[SearchResult]:
         """Search for buildings using hybrid FTS + fuzzy matching"""
+        fts_results = []
+
+        # Try FTS search first, but handle gracefully if FTS table doesn't exist
+        try:
+            # First, try exact/prefix matches using SQLite FTS5
+            fts_query = """
+            SELECT game_building_types.id, game_building_types.name, game_building_types.building_id,
+                   bm25(buildings_fts) as rank_score
+            FROM game_building_types
+            LEFT JOIN buildings_fts ON game_building_types.id = buildings_fts.rowid
+            WHERE buildings_fts MATCH :query OR game_building_types.name LIKE :like_query
+            ORDER BY rank_score ASC, game_building_types.name
+            LIMIT :limit
+            """
+
+            # Execute FTS search
+            result = await self.db.execute(
+                text(fts_query),
+                {"query": query, "like_query": f"%{query}%", "limit": limit * 2},
+            )
+            fts_results = result.fetchall()
+        except (OperationalError, ProgrammingError):
+            # FTS table doesn't exist or there's an issue, fall back to regular search
+            simple_query = """
+            SELECT id, name, building_id, 100.0 as rank_score
+            FROM game_building_types
+            WHERE name LIKE :like_query
+            ORDER BY name
+            LIMIT :limit
+            """
+            result = await self.db.execute(
+                text(simple_query),
+                {"like_query": f"%{query}%", "limit": limit * 2},
+            )
+            fts_results = result.fetchall()
+
+        # If FTS doesn't return enough results, fall back to fuzzy search
+        if len(fts_results) < limit:
+            # Get all buildings for fuzzy matching
+            all_buildings_result = await self.db.execute(
+                text("SELECT id, name, building_id FROM game_building_types"),
+            )
+            all_buildings = all_buildings_result.fetchall()
+
+            building_names = {building.name: (building.id, building.building_id) for building in all_buildings}
+            fuzzy_results = process.extract(
+                query,
+                building_names.keys(),
+                scorer=fuzz.WRatio,
+                limit=limit,
+                score_cutoff=score_cutoff,
+            )
+
+            # Combine and deduplicate results
+            combined_results = []
+            seen_ids = set()
+
+            # Add FTS results first
+            for row in fts_results:
+                if row.id not in seen_ids:
+                    # Convert bm25 score (negative, lower is better) to positive score (higher is better)
+                    normalized_score = max(0, 100 + (row.rank_score or -10))
+                    combined_results.append(SearchResult(
+                        name=row.name,
+                        score=normalized_score,
+                        id=row.building_id,
+                        type="building",
+                    ))
+                    seen_ids.add(row.id)
+
+            # Add fuzzy results
+            for name, score, _ in fuzzy_results:
+                building_id, db_building_id = building_names[name]
+                if building_id not in seen_ids:
+                    combined_results.append(SearchResult(
+                        name=name,
+                        score=score,
+                        id=db_building_id,
+                        type="building",
+                    ))
+                    seen_ids.add(building_id)
+
+            return combined_results[:limit]
+
+        # Return FTS results
+        return [
+            SearchResult(
+                name=row.name,
+                score=row.rank_score or 100.0,
+                id=row.building_id,
+                type="building",
+            )
+            for row in fts_results[:limit]
+        ]
 
     async def search_cargo(self, query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[SearchResult]:
         """Search for cargo using hybrid FTS + fuzzy matching"""
+        fts_results = []
+
+        # Try FTS search first, but handle gracefully if FTS table doesn't exist
+        try:
+            # First, try exact/prefix matches using SQLite FTS5
+            fts_query = """
+            SELECT game_cargos.id, game_cargos.name, game_cargos.cargo_id,
+                   bm25(cargo_fts) as rank_score
+            FROM game_cargos
+            LEFT JOIN cargo_fts ON game_cargos.id = cargo_fts.rowid
+            WHERE cargo_fts MATCH :query OR game_cargos.name LIKE :like_query
+            ORDER BY rank_score ASC, game_cargos.name
+            LIMIT :limit
+            """
+
+            # Execute FTS search
+            result = await self.db.execute(
+                text(fts_query),
+                {"query": query, "like_query": f"%{query}%", "limit": limit * 2},
+            )
+            fts_results = result.fetchall()
+        except (OperationalError, ProgrammingError):
+            # FTS table doesn't exist or there's an issue, fall back to regular search
+            simple_query = """
+            SELECT id, name, cargo_id, 100.0 as rank_score
+            FROM game_cargos
+            WHERE name LIKE :like_query
+            ORDER BY name
+            LIMIT :limit
+            """
+            result = await self.db.execute(
+                text(simple_query),
+                {"like_query": f"%{query}%", "limit": limit * 2},
+            )
+            fts_results = result.fetchall()
+
+        # If FTS doesn't return enough results, fall back to fuzzy search
+        if len(fts_results) < limit:
+            # Get all cargo for fuzzy matching
+            all_cargo_result = await self.db.execute(
+                text("SELECT id, name, cargo_id FROM game_cargos"),
+            )
+            all_cargo = all_cargo_result.fetchall()
+
+            cargo_names = {cargo.name: (cargo.id, cargo.cargo_id) for cargo in all_cargo}
+            fuzzy_results = process.extract(
+                query,
+                cargo_names.keys(),
+                scorer=fuzz.WRatio,
+                limit=limit,
+                score_cutoff=score_cutoff,
+            )
+
+            # Combine and deduplicate results
+            combined_results = []
+            seen_ids = set()
+
+            # Add FTS results first
+            for row in fts_results:
+                if row.id not in seen_ids:
+                    # Convert bm25 score (negative, lower is better) to positive score (higher is better)
+                    normalized_score = max(0, 100 + (row.rank_score or -10))
+                    combined_results.append(SearchResult(
+                        name=row.name,
+                        score=normalized_score,
+                        id=row.cargo_id,
+                        type="cargo",
+                    ))
+                    seen_ids.add(row.id)
+
+            # Add fuzzy results
+            for name, score, _ in fuzzy_results:
+                cargo_id, db_cargo_id = cargo_names[name]
+                if cargo_id not in seen_ids:
+                    combined_results.append(SearchResult(
+                        name=name,
+                        score=score,
+                        id=db_cargo_id,
+                        type="cargo",
+                    ))
+                    seen_ids.add(cargo_id)
+
+            return combined_results[:limit]
+
+        # Return FTS results
+        return [
+            SearchResult(
+                name=row.name,
+                score=row.rank_score or 100.0,
+                id=row.cargo_id,
+                type="cargo",
+            )
+            for row in fts_results[:limit]
+        ]
 
 
 async def init_game_data() -> None:
@@ -294,7 +481,6 @@ async def init_game_data() -> None:
     _, item_by_id = load_item_descriptions()
     _, building_recipes = load_building_recipes()
     building_descriptions = load_building_descriptions()
-    await create_fts_tables()
 
     # fill out the item data
     async with SessionLocal() as db:
@@ -369,25 +555,34 @@ async def init_game_data() -> None:
     # fill out the building data
     async with SessionLocal() as db:
         for building_id, building_obj in building_descriptions.items():
+            # Extract category ID from list format [category_id, metadata]
+            category_id = building_obj["category"][0] if isinstance(building_obj["category"], list) else building_obj["category"]
+
             building_orm = GameBuildingTypeOrm(
                 building_id=building_id,
                 name=building_obj["name"],
-                category=building_obj["category"],
+                category=category_id,
             )
             db.add(building_orm)
 
         for building_recipe_id, building_recipe_obj in building_recipes.items():
-            level_requirements = [GameBuildingRecipeLevelRequirementOrm(
-                building_recipe_id=building_recipe_id,
-                level=building_recipe_obj["level_requirements"][0][0],
-                skill_id=building_recipe_obj["level_requirements"][0][1],
-            )]
+            # Handle level requirements (only if they exist)
+            level_requirements = []
+            if building_recipe_obj["level_requirements"]:
+                level_requirements = [GameBuildingRecipeLevelRequirementOrm(
+                    building_recipe_id=building_recipe_id,
+                    level=building_recipe_obj["level_requirements"][0][0],
+                    skill_id=building_recipe_obj["level_requirements"][0][1],
+                )]
 
-            tool_requirements = [GameBuildingRecipeToolRequirementOrm(
-                building_recipe_id=building_recipe_id,
-                tool_id=building_recipe_obj["tool_requirements"][0][0],
-                tool_tier=building_recipe_obj["tool_requirements"][0][1],
-            )]
+            # Handle tool requirements (only if they exist)
+            tool_requirements = []
+            if building_recipe_obj["tool_requirements"]:
+                tool_requirements = [GameBuildingRecipeToolRequirementOrm(
+                    building_recipe_id=building_recipe_id,
+                    tool_id=building_recipe_obj["tool_requirements"][0][0],
+                    tool_tier=building_recipe_obj["tool_requirements"][0][1],
+                )]
 
             consumed_item_stacks = [GameBuildingRecipeConsumedItemOrm(
                 building_recipe_id=building_recipe_id,
@@ -435,10 +630,18 @@ async def init_game_data() -> None:
 
 async def create_fts_tables() -> None:
     """Create FTS5 virtual tables for search"""
-    async with SessionLocal() as conn:
+    from sqlalchemy import text  # noqa: PLC0415
+
+    from database import engine  # noqa: PLC0415
+    async with engine.begin() as conn:
+        # Drop existing FTS tables if they exist
+        await conn.execute(text("DROP TABLE IF EXISTS items_fts"))
+        await conn.execute(text("DROP TABLE IF EXISTS buildings_fts"))
+        await conn.execute(text("DROP TABLE IF EXISTS cargo_fts"))
+
         # Create FTS table for items
         await conn.execute(text("""
-            CREATE VIRTUAL TABLE IF NOT EXISTS items_fts USING fts5(
+            CREATE VIRTUAL TABLE items_fts USING fts5(
                 name, description, tag,
                 content='game_items',
                 content_rowid='id'
@@ -447,26 +650,21 @@ async def create_fts_tables() -> None:
 
         # Create FTS table for buildings
         await conn.execute(text("""
-            CREATE VIRTUAL TABLE IF NOT EXISTS buildings_fts USING fts5(
+            CREATE VIRTUAL TABLE buildings_fts USING fts5(
                 name,
-                content='game_buildings',
+                content='game_building_types',
                 content_rowid='id'
             )
         """))
 
         # Create FTS table for cargo
         await conn.execute(text("""
-            CREATE VIRTUAL TABLE IF NOT EXISTS cargo_fts USING fts5(
+            CREATE VIRTUAL TABLE cargo_fts USING fts5(
                 name, description, tag,
                 content='game_cargos',
                 content_rowid='id'
             )
         """))
-
-        # Clear existing FTS data and repopulate
-        await conn.execute(text("DELETE FROM items_fts"))
-        await conn.execute(text("DELETE FROM buildings_fts"))
-        await conn.execute(text("DELETE FROM cargo_fts"))
 
         # Populate FTS tables
         await conn.execute(text("""
@@ -476,7 +674,7 @@ async def create_fts_tables() -> None:
 
         await conn.execute(text("""
             INSERT INTO buildings_fts(rowid, name)
-            SELECT id, name FROM game_buildings
+            SELECT id, name FROM game_building_types
         """))
 
         await conn.execute(text("""
@@ -488,7 +686,11 @@ async def create_fts_tables() -> None:
         await conn.commit()
 
 
-def build_everything() -> None:
-    asyncio.run(init_database())
-    asyncio.run(init_game_data())
-    asyncio.run(create_fts_tables())
+async def build_everything() -> None:
+    print("Initializing database...")
+    await init_database()
+    print("Initializing game data...")
+    await init_game_data()
+    print("Creating FTS tables...")
+    await create_fts_tables()
+    print("Done!")
