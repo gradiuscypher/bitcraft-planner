@@ -11,13 +11,17 @@ import {
   BookOpen,
   Users,
   Zap,
-  FolderOpen
+  FolderOpen,
+  Settings2
 } from 'lucide-react'
 import { SearchDropdown } from '@/components/search-dropdown'
 import { UserNav } from '@/components/user-nav'
 import { AuthProvider } from '@/hooks/use-auth'
 import { SearchResults } from '@/pages/search-results'
+import { AdvancedSearch } from '@/pages/advanced-search'
 import { ItemDetail } from '@/pages/item-detail'
+import { BuildingDetail } from '@/pages/building-detail'
+import { CargoDetail } from '@/pages/cargo-detail'
 import { LoginPage } from '@/pages/login'
 import { AuthCallback } from '@/pages/auth-callback'
 import { GroupsPage } from '@/pages/groups'
@@ -50,6 +54,12 @@ function LandingPage() {
                 Browse Recipes
               </Link>
             </Button>
+            <Button size="lg" variant="outline" className="text-lg px-8" asChild>
+              <Link to="/search/advanced">
+                <Settings2 className="h-5 w-5 mr-2" />
+                Advanced Search
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
@@ -74,7 +84,7 @@ function LandingPage() {
                 </div>
                 <CardTitle className="text-xl">Recipe Explorer</CardTitle>
                 <CardDescription>
-                  Discover and explore all available recipes with detailed information about items, buildings, and cargo
+                  Discover and explore all available recipes with detailed information about items, buildings, and cargo. Use advanced search with filters and sorting for precise results.
                 </CardDescription>
               </CardHeader>
             </Card>
@@ -162,6 +172,12 @@ function App() {
                       </Link>
                     </Button>
                     <Button variant="ghost" size="sm" asChild>
+                      <Link to="/search/advanced">
+                        <Settings2 className="h-4 w-4 mr-2" />
+                        Advanced Search
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild>
                       <Link to="/projects">
                         <FolderOpen className="h-4 w-4 mr-2" />
                         Projects
@@ -195,9 +211,10 @@ function App() {
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/search" element={<SearchResults />} />
+              <Route path="/search/advanced" element={<AdvancedSearch />} />
               <Route path="/item/:itemId" element={<ItemDetail />} />
-              <Route path="/building/:buildingId" element={<ItemDetail />} />
-              <Route path="/cargo/:cargoId" element={<ItemDetail />} />
+              <Route path="/building/:buildingId" element={<BuildingDetail />} />
+              <Route path="/cargo/:cargoId" element={<CargoDetail />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/projects" element={<ProjectsPage />} />

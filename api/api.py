@@ -10,6 +10,8 @@ from fastapi.responses import JSONResponse
 
 from database import init_database
 from routes.auth import auth
+from routes.buildings import buildings
+from routes.cargo import cargo
 from routes.groups import groups
 from routes.items import items
 from routes.projects import projects
@@ -115,6 +117,8 @@ else:
 
 # Include the routers
 app.include_router(auth)
+app.include_router(buildings)
+app.include_router(cargo)
 app.include_router(items)
 app.include_router(groups)
 app.include_router(projects)

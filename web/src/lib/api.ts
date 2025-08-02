@@ -39,6 +39,31 @@ export interface CargoDetail {
   [key: string]: unknown // Allow for additional properties from the API
 }
 
+export interface ConsumedItem {
+  item_id: number
+  amount: number
+  recipe_id: number
+}
+
+export interface ProducedItem {
+  item_id: number
+  recipe_id: number
+  amount: number
+}
+
+export interface Recipe {
+  id: number
+  actions_required: number
+  building_tier_requirement: number
+  building_type_requirement: number
+  consumed_items: ConsumedItem[]
+  produced_items: ProducedItem[]
+  stamina_requirement: number
+  time_requirement: number
+  tool_tier_requirement: number | null
+  tool_type_requirement: number | null
+}
+
 class ApiService {
   private async makeRequest<T>(endpoint: string): Promise<T> {
     try {
@@ -55,15 +80,19 @@ class ApiService {
 
   // Individual item fetch methods
   async getItem(itemId: number): Promise<ItemDetail> {
-    return this.makeRequest<ItemDetail>(`/item/${itemId}`)
+    return this.makeRequest<ItemDetail>(`/items/${itemId}`)
   }
 
   async getBuilding(buildingId: number): Promise<BuildingDetail> {
-    return this.makeRequest<BuildingDetail>(`/building/${buildingId}`)
+    return this.makeRequest<BuildingDetail>(`/buildings/${buildingId}`)
   }
 
   async getCargo(cargoId: number): Promise<CargoDetail> {
     return this.makeRequest<CargoDetail>(`/cargo/${cargoId}`)
+  }
+
+  async getItemRecipe(itemId: number): Promise<Recipe[]> {
+    return this.makeRequest<Recipe[]>(`/items/${itemId}/recipe`)
   }
 
   // Search methods
@@ -73,7 +102,7 @@ class ApiService {
       limit: limit.toString(),
       score_cutoff: score_cutoff.toString()
     })
-    return this.makeRequest<SearchResponse>(`/search/items?${params}`)
+    return this.makeRequest<SearchResponse>(`/items/search?${params}`)
   }
 
   async searchBuildings(query: string, limit: number = 10, score_cutoff: number = 60.0): Promise<SearchResponse> {
@@ -82,7 +111,7 @@ class ApiService {
       limit: limit.toString(),
       score_cutoff: score_cutoff.toString()
     })
-    return this.makeRequest<SearchResponse>(`/search/buildings?${params}`)
+    return this.makeRequest<SearchResponse>(`/items/search/buildings?${params}`)
   }
 
   async searchCargo(query: string, limit: number = 10, score_cutoff: number = 60.0): Promise<SearchResponse> {
@@ -91,7 +120,7 @@ class ApiService {
       limit: limit.toString(),
       score_cutoff: score_cutoff.toString()
     })
-    return this.makeRequest<SearchResponse>(`/search/cargo?${params}`)
+    return this.makeRequest<SearchResponse>(`/items/search/cargo?${params}`)
   }
 
   async searchAll(query: string, limit: number = 10, score_cutoff: number = 60.0): Promise<SearchAllResponse> {
@@ -100,7 +129,7 @@ class ApiService {
       limit: limit.toString(),
       score_cutoff: score_cutoff.toString()
     })
-    return this.makeRequest<SearchAllResponse>(`/search/all?${params}`)
+    return this.makeRequest<SearchAllResponse>(`/items/search/all?${params}`)
   }
 
   async getBestMatch(query: string, search_type: string = 'all'): Promise<SearchResult | null> {
@@ -108,7 +137,7 @@ class ApiService {
       query,
       search_type
     })
-    return this.makeRequest<SearchResult | null>(`/search/best?${params}`)
+    return this.makeRequest<SearchResult | null>(`/items/search/best?${params}`)
   }
 }
 

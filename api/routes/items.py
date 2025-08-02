@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from typing import Annotated
 
@@ -168,12 +167,10 @@ async def search_all(
     """Search across all categories using hybrid FTS + fuzzy matching"""
     search_service = SearchService(db)
 
-    # Perform searches across all categories in parallel
-    items_results, buildings_results, cargo_results = await asyncio.gather(
-        search_service.search_items(query, limit, score_cutoff),
-        search_service.search_buildings(query, limit, score_cutoff),
-        search_service.search_cargo(query, limit, score_cutoff),
-    )
+    # Perform searches across all categories sequentially to avoid session conflicts
+    items_results = await search_service.search_items(query, limit, score_cutoff)
+    buildings_results = await search_service.search_buildings(query, limit, score_cutoff)
+    cargo_results = await search_service.search_cargo(query, limit, score_cutoff)
 
     # Convert gamedata SearchResult objects to Pydantic SearchResult models
     items = [

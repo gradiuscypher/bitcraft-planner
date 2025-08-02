@@ -34,6 +34,7 @@ export function SearchDropdown({ onSearch, onSelectItem }: SearchDropdownProps) 
     if (query.length < 2) {
       setSearchResults(null)
       setIsOpen(false)
+      setLoading(false) // Ensure loading is false when query is too short
       return
     }
 
@@ -46,12 +47,17 @@ export function SearchDropdown({ onSearch, onSelectItem }: SearchDropdownProps) 
         setSelectedIndex(-1)
       } catch (error) {
         console.error('Search error:', error)
+        setSearchResults(null) // Clear results on error
+        setIsOpen(false) // Close dropdown on error
       } finally {
         setLoading(false)
       }
     }, 300)
 
-    return () => clearTimeout(debounceTimer)
+    return () => {
+      clearTimeout(debounceTimer)
+      setLoading(false) // Ensure loading is false when effect is cleaned up
+    }
   }, [query])
 
   // Handle keyboard navigation
@@ -196,12 +202,12 @@ export function SearchDropdown({ onSearch, onSelectItem }: SearchDropdownProps) 
       </div>
 
       {/* Search Results Dropdown */}
-      {isOpen && (
+      {isOpen && query.length >= 2 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-50 max-h-96 overflow-y-auto">
-          {loading ? (
+          {loading && query.length >= 2 ? (
             <div className="p-4 text-center text-muted-foreground">
               <Search className="h-4 w-4 animate-spin mx-auto mb-2" />
-              Searching...
+              Searching for "{query}"...
             </div>
           ) : searchResults && (searchResults.items.length > 0 || searchResults.buildings.length > 0 || searchResults.cargo.length > 0) ? (
             <>

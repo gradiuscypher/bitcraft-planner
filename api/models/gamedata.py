@@ -91,6 +91,14 @@ class GameCargoOrm(Base):
     tag: Mapped[str] = mapped_column(String(255), nullable=False)
     volume: Mapped[int] = mapped_column(Integer)
 
+    @classmethod
+    async def get_by_id(cls, cargo_id: int) -> "GameCargoOrm":
+        async with SessionLocal() as session:
+            result = await session.execute(
+                select(cls).filter(cls.cargo_id == cargo_id),
+            )
+            return result.scalar_one_or_none()
+
 
 class GameBuildingTypeOrm(Base):
     __tablename__ = "game_building_types"
@@ -98,6 +106,14 @@ class GameBuildingTypeOrm(Base):
     building_id: Mapped[int] = mapped_column(Integer, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     category: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    @classmethod
+    async def get_by_id(cls, building_id: int) -> "GameBuildingTypeOrm":
+        async with SessionLocal() as session:
+            result = await session.execute(
+                select(cls).filter(cls.building_id == building_id),
+            )
+            return result.scalar_one_or_none()
 
 
 class GameBuildingRecipeLevelRequirementOrm(Base):

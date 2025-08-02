@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
-import { Search, Package, Building, Truck, ChevronRight } from 'lucide-react'
+import { useSearchParams, useNavigate, Link } from 'react-router-dom'
+import { Search, Package, Building, Truck, ChevronRight, Settings2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -17,7 +17,6 @@ export function SearchResults() {
 
   useEffect(() => {
     if (!query) {
-      navigate('/')
       return
     }
 
@@ -84,7 +83,7 @@ export function SearchResults() {
         {results.map((item) => (
           <Card 
             key={`${item.type}-${item.id}`}
-            className="cursor-pointer hover:shadow-md transition-shadow"
+            className="cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border-2 hover:border-primary/50"
             onClick={() => handleItemClick(item)}
           >
             <CardHeader className="pb-3">
@@ -152,12 +151,22 @@ export function SearchResults() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Search Results
-          </h1>
-          <p className="text-muted-foreground">
-            {totalResults} results found for "{query}"
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-2">
+                Search Results
+              </h1>
+              <p className="text-muted-foreground">
+                {totalResults} results found for "{query}"
+              </p>
+            </div>
+            <Button variant="outline" asChild>
+              <Link to={`/search/advanced?q=${encodeURIComponent(query)}`}>
+                <Settings2 className="h-4 w-4 mr-2" />
+                Advanced Search
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* No results */}
