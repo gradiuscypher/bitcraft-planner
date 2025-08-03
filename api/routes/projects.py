@@ -25,7 +25,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models.projects import CreateProjectRequest, Project, ProjectOrm
+from models.gamedata import GameItemOrm
+from models.projects import (
+    AddItemToProjectRequest,
+    CreateProjectRequest,
+    Project,
+    ProjectItemOrm,
+    ProjectOrm,
+)
 from models.users import UserOrm
 from routes.auth import get_current_user
 
@@ -100,6 +107,28 @@ async def delete_project(project_id: int, current_user: Annotated[UserOrm, Depen
     if not project_orm.does_user_have_access(current_user.id):
         raise HTTPException(status_code=403, detail="You do not have access to this project")
     await db.delete(project_orm)
+    await db.commit()
+
+
+@projects.post("/{project_id}/items")
+async def add_item_to_project(project_id: int, item: AddItemToProjectRequest, current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> Project:
+    result = await db.execute(select(ProjectOrm).where(ProjectOrm.id == project_id))
+    project_orm = result.scalar_one_or_none()
+    if not project_orm:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not project_orm.does_user_have_access(current_user.id):
+        raise HTTPException(status_code=403, detail="You do not have access to this project")
+
+    item_orm = await GameItemOrm.get_by_id(item.item_id)
+    if not item_orm:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+    project_item_orm = ProjectItemOrm(
+        project_id=project_id,
+        item_id=item.item_id,
+        amount=item.amount,
+    )
+    db.add(project_item_orm)
     await db.commit()
 
 

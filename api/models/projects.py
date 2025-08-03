@@ -9,11 +9,17 @@ from database import Base
 
 if TYPE_CHECKING:
     from models.users import UserOrm, UserGroupOrm  # noqa: I001
+    from models.gamedata import GameItemOrm
 
 
 class CreateProjectRequest(BaseModel):
     name: str
     group_id: int | None = None
+
+
+class AddItemToProjectRequest(BaseModel):
+    item_id: int
+    amount: int
 
 
 class Project(BaseModel):
@@ -40,6 +46,7 @@ class ProjectItemOrm(Base):
     __tablename__ = "project_items"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    item: Mapped["GameItemOrm"] = relationship("GameItemOrm")
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     count: Mapped[int] = mapped_column(Integer, nullable=False)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
