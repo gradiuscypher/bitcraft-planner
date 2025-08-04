@@ -147,8 +147,8 @@ export function CargoDetail() {
                 <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
                   cargo
                 </Badge>
-                <Badge variant="outline" className={getTierColor(cargo.tier)}>
-                  Tier {cargo.tier}
+                <Badge variant="outline" className={getTierColor(Number(cargo.tier) || 1)}>
+                  Tier {String(cargo.tier || 1)}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
                   ID: {cargo.id}
@@ -169,7 +169,7 @@ export function CargoDetail() {
                   Cargo Overview
                 </CardTitle>
                 <CardDescription>
-                  {cargo.description}
+                  {String(cargo.description || '')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -182,11 +182,11 @@ export function CargoDetail() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center gap-2">
                       <Package className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm text-foreground">Volume: {cargo.volume}</span>
+                      <span className="text-sm text-foreground">Volume: {String(cargo.volume || 0)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-yellow-500" />
-                      <span className="text-sm text-foreground">Movement: {Math.round(cargo.movement_modifier * 100)}%</span>
+                      <span className="text-sm text-foreground">Movement: {Math.round((Number(cargo.movement_modifier) || 0) * 100)}%</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Settings className="h-4 w-4 text-gray-500" />
@@ -194,7 +194,7 @@ export function CargoDetail() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-red-500" />
-                      <span className="text-sm text-foreground">Despawn: {formatDespawnTime(cargo.despawn_time)}</span>
+                      <span className="text-sm text-foreground">Despawn: {formatDespawnTime(Number(cargo.despawn_time) || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -210,11 +210,11 @@ export function CargoDetail() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center gap-2">
                       <PlayCircle className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-foreground">Pick Up: {formatTime(cargo.pick_up_time)}</span>
+                      <span className="text-sm text-foreground">Pick Up: {formatTime(Number(cargo.pick_up_time) || 0)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <PlayCircle className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm text-foreground">Place Down: {formatTime(cargo.place_time)}</span>
+                      <span className="text-sm text-foreground">Place Down: {formatTime(Number(cargo.place_time) || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -230,16 +230,16 @@ export function CargoDetail() {
                   <div className="grid gap-2 text-sm text-foreground">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Pick Up Animation:</span>
-                      <span className="font-medium text-foreground">{cargo.pick_up_animation_start} → {cargo.pick_up_animation_end}</span>
+                      <span className="font-medium text-foreground">{String(cargo.pick_up_animation_start || '')} → {String(cargo.pick_up_animation_end || '')}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Drop Animation:</span>
-                      <span className="font-medium text-foreground">{cargo.drop_animation_start} → {cargo.drop_animation_end}</span>
+                      <span className="font-medium text-foreground">{String(cargo.drop_animation_start || '')} → {String(cargo.drop_animation_end || '')}</span>
                     </div>
-                    {cargo.animator_state && (
+                    {Boolean(cargo.animator_state) && (
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Animator State:</span>
-                        <span className="font-medium text-foreground">{cargo.animator_state}</span>
+                        <span className="font-medium text-foreground">{String(cargo.animator_state || '')}</span>
                       </div>
                     )}
                   </div>
@@ -306,12 +306,12 @@ export function CargoDetail() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Tag:</span>
-                    <span className="font-medium text-foreground">{cargo.tag}</span>
+                    <span className="font-medium text-foreground">{String(cargo.tag || '')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Tier:</span>
-                    <Badge variant="outline" className={getTierColor(cargo.tier)}>
-                      {cargo.tier}
+                    <Badge variant="outline" className={getTierColor(Number(cargo.tier) || 1)}>
+                      {String(cargo.tier || 1)}
                     </Badge>
                   </div>
                   <div className="flex justify-between">

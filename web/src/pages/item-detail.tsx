@@ -20,7 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { AddToProject } from "@/components/add-to-project"
-import { apiService, type ItemDetail, type BuildingDetail, type CargoDetail, type Recipe, type BuildingType } from '@/lib/api'
+import { apiService, type ItemDetail, type BuildingDetail, type CargoDetail, type Recipe } from '@/lib/api'
 
 type ItemDetailData = ItemDetail | BuildingDetail | CargoDetail
 
