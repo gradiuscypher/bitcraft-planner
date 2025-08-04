@@ -1,6 +1,11 @@
 # bitcraft-planner
 Crafting planner for Bitcraft Online
 
+# Feedback
+- Build projects from a single product, break down items into their base requirements, eg: 25x T5 Codex Items, breaking down gear requirements for upgrades
+  - Break down the requirements by tier
+- Update item counts by setting a specific number, not just plus and minus
+
 # Working on
 - Clean up TODO
 - When someone adds an item from a project page, it should remember what project was selected and use that as the default
