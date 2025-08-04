@@ -58,55 +58,30 @@ export function usePolling<T>(
   }, [pauseOnHidden]);
 
   const fetchData = useCallback(async (isInitialLoad = false) => {
-    if (!isMountedRef.current) {
-      console.log('🔄 Polling: ❌ Component unmounted before fetchData started');
-      return;
-    }
+    if (!isMountedRef.current) return;
 
-    console.log('🔄 Polling: fetchData called', { isInitialLoad });
     try {
       if (isInitialLoad) {
-        console.log('🔄 Polling: Setting loading = true for initial load');
         setLoading(true);
       }
       setError(null);
 
-      console.log('🔄 Polling: Making API request...');
       const result = await fetchFn();
       
-      console.log('🔄 Polling: API call returned, checking if mounted...', { mounted: isMountedRef.current });
-      
-      if (!isMountedRef.current) {
-        console.log('🔄 Polling: ❌ Component unmounted after API call, skipping state updates');
-        return;
-      }
+      if (!isMountedRef.current) return;
 
-      console.log('🔄 Polling: ✅ API request successful', { 
-        resultType: typeof result, 
-        isArray: Array.isArray(result),
-        length: Array.isArray(result) ? result.length : 'N/A'
-      });
       setData(result);
       onSuccess?.(result);
     } catch (err) {
-      console.log('🔄 Polling: API call failed, checking if mounted...', { mounted: isMountedRef.current });
-      
-      if (!isMountedRef.current) {
-        console.log('🔄 Polling: ❌ Component unmounted during error handling');
-        return;
-      }
+      if (!isMountedRef.current) return;
 
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data';
-      console.error('🔄 Polling: ❌ API request failed', { error: err, message: errorMessage });
       setError(errorMessage);
       onError?.(err instanceof Error ? err : new Error(errorMessage));
     } finally {
       // Always set loading to false for initial loads, regardless of success/failure
       if (isMountedRef.current && isInitialLoad) {
-        console.log('🔄 Polling: Setting loading = false after initial fetch');
         setLoading(false);
-      } else if (isInitialLoad) {
-        console.log('🔄 Polling: ❌ Component unmounted, cannot set loading = false');
       }
     }
   }, [fetchFn]);
@@ -140,13 +115,8 @@ export function usePolling<T>(
 
   // Initial data fetch
   useEffect(() => {
-    console.log('🔄 Polling: Initial fetch effect triggered', { enabled });
-    if (!enabled) {
-      console.log('🔄 Polling: ❌ Disabled, skipping initial fetch');
-      return;
-    }
+    if (!enabled) return;
 
-    console.log('🔄 Polling: ✅ Enabled, starting initial fetch');
     // Initial fetch only
     fetchData(true);
   }, [enabled, fetchData]); // Include fetchData dependency
@@ -182,7 +152,6 @@ export function usePolling<T>(
   useEffect(() => {
     isMountedRef.current = true; // Ensure it's set to true on mount
     return () => {
-      console.log('🔄 Polling: Component unmounting, cleaning up...');
       isMountedRef.current = false;
       stopPolling();
     };

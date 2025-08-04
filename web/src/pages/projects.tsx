@@ -37,13 +37,6 @@ import type { ProjectWithItems } from '@/types/projects';
 export function ProjectsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-  
-  console.log('📄 ProjectsPage: Render', { 
-    hasUser: !!user, 
-    authLoading, 
-    userEmail: user?.email,
-    pollingEnabled: !!user && !authLoading 
-  });
 
   // Use polling hooks for automatic updates
   const { 
@@ -55,13 +48,6 @@ export function ProjectsPage() {
     interval: POLLING_CONFIG.PROJECTS_INTERVAL,
     initialDelay: POLLING_CONFIG.INITIAL_DELAY,
     enabled: !!user && !authLoading // Only poll when user is authenticated and auth is complete
-  });
-
-  console.log('📄 ProjectsPage: Polling state', { 
-    loading, 
-    hasData: !!projects, 
-    dataLength: Array.isArray(projects) ? projects.length : 'not array',
-    error 
   });
   
   const { 

@@ -21,25 +21,17 @@ interface UseProjectsPollingOptions {
  */
 export function useProjectsPolling(options: UseProjectsPollingOptions = {}) {
   const interval = options.interval ?? 5000;
-  console.log('🚀 useProjectsPolling: Initializing', { 
-    enabled: options.enabled, 
-    interval, 
-    initialDelay: options.initialDelay ?? interval 
-  });
   
   const fetchFn = useCallback(async () => {
-    console.log('🚀 useProjectsPolling: Calling projectsService.getUserProjects()');
-    const result = await projectsService.getUserProjects();
-    console.log('🚀 useProjectsPolling: Service call complete');
-    return result;
+    return await projectsService.getUserProjects();
   }, []);
 
-  const onSuccess = useCallback((data: ProjectWithItems[]) => {
-    console.log('🚀 useProjectsPolling: ✅ Success', { count: Array.isArray(data) ? data.length : 0, data });
+  const onSuccess = useCallback((_data: unknown) => {
+    // Success callback - can be used for additional processing if needed
   }, []);
 
   const onError = useCallback((error: Error) => {
-    console.error('🚀 useProjectsPolling: ❌ Error', error);
+    console.error('Failed to poll projects:', error);
   }, []);
 
   return usePolling<ProjectWithItems[]>(
@@ -59,25 +51,17 @@ export function useProjectsPolling(options: UseProjectsPollingOptions = {}) {
  */
 export function useGroupsPolling(options: UseProjectsPollingOptions = {}) {
   const interval = options.interval ?? 5000;
-  console.log('👥 useGroupsPolling: Initializing', { 
-    enabled: options.enabled, 
-    interval, 
-    initialDelay: options.initialDelay ?? interval 
-  });
   
   const fetchFn = useCallback(async () => {
-    console.log('👥 useGroupsPolling: Calling groupsService.getUserGroups()');
-    const result = await groupsService.getUserGroups();
-    console.log('👥 useGroupsPolling: Service call complete');
-    return result;
+    return await groupsService.getUserGroups();
   }, []);
 
-  const onSuccess = useCallback((data: UserGroup[]) => {
-    console.log('👥 useGroupsPolling: ✅ Success', { count: Array.isArray(data) ? data.length : 0, data });
+  const onSuccess = useCallback((_data: unknown) => {
+    // Success callback - can be used for additional processing if needed
   }, []);
 
   const onError = useCallback((error: Error) => {
-    console.error('👥 useGroupsPolling: ❌ Error', error);
+    console.error('Failed to poll groups:', error);
   }, []);
 
   return usePolling<UserGroup[]>(
@@ -100,26 +84,16 @@ export function useProjectPolling(
   options: UseProjectsPollingOptions = {}
 ) {
   const interval = options.interval ?? 5000;
-  
-  console.log('📋 useProjectPolling: Initializing', { 
-    projectId, 
-    enabled: options.enabled, 
-    hasProjectId: !!projectId,
-    shouldEnable: options.enabled !== false && projectId !== null 
-  });
 
   const fetchFn = useCallback(async () => {
     if (!projectId) {
       throw new Error('Project ID is required');
     }
-    console.log('📋 useProjectPolling: Calling projectsService.getProject for ID:', projectId);
-    const result = await projectsService.getProject(projectId);
-    console.log('📋 useProjectPolling: Service call complete');
-    return result;
+    return await projectsService.getProject(projectId);
   }, [projectId]);
 
   const onError = useCallback((error: Error) => {
-    console.error(`📋 useProjectPolling: ❌ Error for project ${projectId}:`, error);
+    console.error(`Failed to poll project ${projectId}:`, error);
   }, [projectId]);
 
   return usePolling<ProjectWithItems>(
@@ -142,26 +116,16 @@ export function useGroupPolling(
   options: UseProjectsPollingOptions = {}
 ) {
   const interval = options.interval ?? 5000;
-  
-  console.log('🏗️ useGroupPolling: Initializing', { 
-    groupId, 
-    enabled: options.enabled, 
-    hasGroupId: !!groupId,
-    shouldEnable: options.enabled !== false && groupId !== null 
-  });
 
   const fetchFn = useCallback(async () => {
     if (!groupId) {
       throw new Error('Group ID is required');
     }
-    console.log('🏗️ useGroupPolling: Calling groupsService.getGroup for ID:', groupId);
-    const result = await groupsService.getGroup(groupId);
-    console.log('🏗️ useGroupPolling: Service call complete');
-    return result;
+    return await groupsService.getGroup(groupId);
   }, [groupId]);
 
   const onError = useCallback((error: Error) => {
-    console.error(`🏗️ useGroupPolling: ❌ Error for group ${groupId}:`, error);
+    console.error(`Failed to poll group ${groupId}:`, error);
   }, [groupId]);
 
   return usePolling<GroupWithDetails>(

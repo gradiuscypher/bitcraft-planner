@@ -36,13 +36,6 @@ import type { UserGroup } from '@/types/groups';
 export function GroupsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-  
-  console.log('📄 GroupsPage: Render', { 
-    hasUser: !!user, 
-    authLoading, 
-    userEmail: user?.email,
-    pollingEnabled: !!user && !authLoading 
-  });
 
   // Use polling hooks for automatic updates
   const { 
@@ -54,13 +47,6 @@ export function GroupsPage() {
     interval: POLLING_CONFIG.GROUPS_INTERVAL,
     initialDelay: POLLING_CONFIG.INITIAL_DELAY,
     enabled: !!user && !authLoading // Only poll when user is authenticated and auth is complete
-  });
-
-  console.log('📄 GroupsPage: Polling state', { 
-    loading, 
-    hasData: !!groups, 
-    dataLength: Array.isArray(groups) ? groups.length : 'not array',
-    error 
   });
   
   const { 
