@@ -181,19 +181,19 @@ export function CargoDetail() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center gap-2">
                       <Package className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm">Volume: {cargo.volume}</span>
+                      <span className="text-sm text-foreground">Volume: {cargo.volume}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-yellow-500" />
-                      <span className="text-sm">Movement: {Math.round(cargo.movement_modifier * 100)}%</span>
+                      <span className="text-sm text-foreground">Movement: {Math.round(cargo.movement_modifier * 100)}%</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Settings className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">Blocks Path: {cargo.blocks_path ? "Yes" : "No"}</span>
+                      <span className="text-sm text-foreground">Blocks Path: {cargo.blocks_path ? "Yes" : "No"}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-red-500" />
-                      <span className="text-sm">Despawn: {formatDespawnTime(cargo.despawn_time)}</span>
+                      <span className="text-sm text-foreground">Despawn: {formatDespawnTime(cargo.despawn_time)}</span>
                     </div>
                   </div>
                 </div>
@@ -209,11 +209,11 @@ export function CargoDetail() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center gap-2">
                       <PlayCircle className="h-4 w-4 text-green-500" />
-                      <span className="text-sm">Pick Up: {formatTime(cargo.pick_up_time)}</span>
+                      <span className="text-sm text-foreground">Pick Up: {formatTime(cargo.pick_up_time)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <PlayCircle className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm">Place Down: {formatTime(cargo.place_time)}</span>
+                      <span className="text-sm text-foreground">Place Down: {formatTime(cargo.place_time)}</span>
                     </div>
                   </div>
                 </div>
@@ -226,7 +226,7 @@ export function CargoDetail() {
                     <PlayCircle className="h-5 w-5" />
                     Animation Details
                   </h3>
-                  <div className="grid gap-2 text-sm">
+                  <div className="grid gap-2 text-sm text-foreground">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Pick Up Animation:</span>
                       <span className="font-medium text-foreground">{cargo.pick_up_animation_start} → {cargo.pick_up_animation_end}</span>

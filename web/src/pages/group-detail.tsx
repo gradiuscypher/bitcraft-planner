@@ -170,7 +170,7 @@ export function GroupDetailPage() {
       <div className="container mx-auto py-8 px-6">
         <div className="text-center">
           <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-6 mb-6">
-            <p className="font-medium">Error</p>
+            <p className="font-medium text-destructive">Error</p>
             <p className="text-sm">{error}</p>
             <Button 
               variant="outline" 

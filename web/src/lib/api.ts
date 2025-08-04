@@ -39,6 +39,12 @@ export interface CargoDetail {
   [key: string]: unknown // Allow for additional properties from the API
 }
 
+export interface BuildingType {
+  id: number
+  name: string
+  [key: string]: unknown // Allow for additional properties from the API
+}
+
 export interface ConsumedItem {
   item_id: number
   amount: number
@@ -93,6 +99,10 @@ class ApiService {
 
   async getItemRecipe(itemId: number): Promise<Recipe[]> {
     return this.makeRequest<Recipe[]>(`/items/${itemId}/recipe`)
+  }
+
+  async getBuildingType(buildingTypeId: number): Promise<BuildingType> {
+    return this.makeRequest<BuildingType>(`/buildings/type/${buildingTypeId}`)
   }
 
   // Search methods

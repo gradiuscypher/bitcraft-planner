@@ -155,19 +155,19 @@ export function BuildingDetail() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center gap-2">
                       <Heart className="h-4 w-4 text-red-500" />
-                      <span className="text-sm">Health: {building.max_health}</span>
+                      <span className="text-sm text-foreground">Health: {building.max_health}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Shield className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm">Defense: {building.defense_level}</span>
+                      <span className="text-sm text-foreground">Defense: {building.defense_level}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-yellow-500" />
-                      <span className="text-sm">Decay: {building.decay}/day</span>
+                      <span className="text-sm text-foreground">Decay: {building.decay}/day</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Lightbulb className="h-4 w-4 text-orange-500" />
-                      <span className="text-sm">Light Radius: {building.light_radius}</span>
+                      <span className="text-sm text-foreground">Light Radius: {building.light_radius}</span>
                     </div>
                   </div>
                 </div>

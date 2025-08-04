@@ -186,7 +186,7 @@ export function ProjectsPage() {
         {/* Error Display */}
         {error && (
           <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-4 mb-6">
-            <p className="font-medium">Error</p>
+            <p className="font-medium text-destructive">Error</p>
             <p className="text-sm">{error}</p>
             <Button 
               variant="outline" 

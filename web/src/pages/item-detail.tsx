@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { apiService, type ItemDetail, type BuildingDetail, type CargoDetail, type Recipe } from '@/lib/api'
+import { apiService, type ItemDetail, type BuildingDetail, type CargoDetail, type Recipe, type BuildingType } from '@/lib/api'
 
 type ItemDetailData = ItemDetail | BuildingDetail | CargoDetail
 
@@ -37,6 +37,7 @@ export function ItemDetail() {
   const [item, setItem] = useState<ItemDetailData | null>(null)
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [consumedItemsWithNames, setConsumedItemsWithNames] = useState<ConsumedItemWithName[]>([])
+  const [buildingTypeNames, setBuildingTypeNames] = useState<{[key: number]: string}>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
@@ -113,6 +114,26 @@ export function ItemDetail() {
             }
 
             setConsumedItemsWithNames(consumedItemsWithNames)
+
+            // Fetch building type names for all recipes
+            const buildingTypeIds = new Set(
+              itemRecipes
+                .filter(recipe => recipe.building_type_requirement > 0)
+                .map(recipe => recipe.building_type_requirement)
+            )
+
+            const buildingTypeNamesMap: {[key: number]: string} = {}
+            for (const typeId of buildingTypeIds) {
+              try {
+                const buildingType = await apiService.getBuildingType(typeId)
+                buildingTypeNamesMap[typeId] = buildingType.name
+              } catch (buildingTypeError) {
+                console.error(`Failed to fetch building type ${typeId}:`, buildingTypeError)
+                buildingTypeNamesMap[typeId] = `Building Type ${typeId}`
+              }
+            }
+
+            setBuildingTypeNames(buildingTypeNamesMap)
           } catch (recipeError) {
             console.error('Failed to fetch recipe data:', recipeError)
             // Don't set error state for recipe failures, just log them
@@ -253,7 +274,7 @@ export function ItemDetail() {
               <CardContent className="space-y-6">
                 <div>
                   <h3 className="font-semibold mb-2 text-foreground">Basic Information</h3>
-                  <div className="grid gap-2 text-sm">
+                  <div className="grid gap-2 text-sm text-foreground">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Name:</span>
                       <span className="font-medium text-foreground">{item.name}</span>
@@ -284,7 +305,7 @@ export function ItemDetail() {
                         {recipes.map((recipe, recipeIndex) => (
                           <div key={recipe.id} className="border rounded-lg p-4 space-y-4">
                             <div className="flex items-center justify-between">
-                              <h4 className="font-semibold">Recipe #{recipe.id}</h4>
+                              <h4 className="font-semibold text-foreground">Recipe #{recipe.id}</h4>
                               <Badge variant="outline">Recipe {recipeIndex + 1}</Badge>
                             </div>
                             
@@ -292,15 +313,15 @@ export function ItemDetail() {
                             <div className="grid grid-cols-3 gap-4">
                               <div className="flex items-center gap-2">
                                 <Clock className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">Time: {recipe.time_requirement}s</span>
+                                <span className="text-sm text-foreground">Time: {recipe.time_requirement}s</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Zap className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">Stamina: {recipe.stamina_requirement}</span>
+                                <span className="text-sm text-foreground">Stamina: {recipe.stamina_requirement}</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Target className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">Actions: {recipe.actions_required}</span>
+                                <span className="text-sm text-foreground">Actions: {recipe.actions_required}</span>
                               </div>
                             </div>
 
@@ -314,13 +335,15 @@ export function ItemDetail() {
                                 <div className="space-y-1">
                                   {recipe.building_type_requirement > 0 && (
                                     <div className="flex items-center justify-between">
-                                      <span className="text-sm">Building Type</span>
-                                      <Badge variant="outline">{recipe.building_type_requirement}</Badge>
+                                      <span className="text-sm text-foreground">Building Type</span>
+                                      <Badge variant="outline">
+                                        {buildingTypeNames[recipe.building_type_requirement] || recipe.building_type_requirement}
+                                      </Badge>
                                     </div>
                                   )}
                                   {recipe.building_tier_requirement > 0 && (
                                     <div className="flex items-center justify-between">
-                                      <span className="text-sm">Building Tier</span>
+                                      <span className="text-sm text-foreground">Building Tier</span>
                                       <Badge variant="outline">Tier {recipe.building_tier_requirement}</Badge>
                                     </div>
                                   )}
@@ -338,13 +361,13 @@ export function ItemDetail() {
                                 <div className="space-y-1">
                                   {recipe.tool_type_requirement && (
                                     <div className="flex items-center justify-between">
-                                      <span className="text-sm">Tool Type</span>
+                                      <span className="text-sm text-foreground">Tool Type</span>
                                       <Badge variant="outline">{recipe.tool_type_requirement}</Badge>
                                     </div>
                                   )}
                                   {recipe.tool_tier_requirement && (
                                     <div className="flex items-center justify-between">
-                                      <span className="text-sm">Tool Tier</span>
+                                      <span className="text-sm text-foreground">Tool Tier</span>
                                       <Badge variant="outline">Tier {recipe.tool_tier_requirement}</Badge>
                                     </div>
                                   )}

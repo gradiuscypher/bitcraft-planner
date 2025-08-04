@@ -208,7 +208,7 @@ export function AdvancedSearch() {
                   <Badge variant="secondary" className={getItemTypeColor(item.type)}>
                     {item.type}
                   </Badge>
-                  <span className="text-sm">
+                  <span className="text-sm text-muted-foreground">
                     {Math.round(item.score)}% match
                   </span>
                 </div>
@@ -275,7 +275,7 @@ export function AdvancedSearch() {
                         checked={filters.includeItems}
                         onCheckedChange={(checked) => handleFilterChange('includeItems', checked)}
                       />
-                      <Label htmlFor="include-items" className="flex items-center gap-2 text-sm">
+                      <Label htmlFor="include-items" className="flex items-center gap-2 text-sm text-foreground">
                         <Package className="h-4 w-4 text-blue-600" />
                         Items
                       </Label>
@@ -286,7 +286,7 @@ export function AdvancedSearch() {
                         checked={filters.includeBuildings}
                         onCheckedChange={(checked) => handleFilterChange('includeBuildings', checked)}
                       />
-                      <Label htmlFor="include-buildings" className="flex items-center gap-2 text-sm">
+                      <Label htmlFor="include-buildings" className="flex items-center gap-2 text-sm text-foreground">
                         <Building className="h-4 w-4 text-green-600" />
                         Buildings
                       </Label>
@@ -297,7 +297,7 @@ export function AdvancedSearch() {
                         checked={filters.includeCargo}
                         onCheckedChange={(checked) => handleFilterChange('includeCargo', checked)}
                       />
-                      <Label htmlFor="include-cargo" className="flex items-center gap-2 text-sm">
+                      <Label htmlFor="include-cargo" className="flex items-center gap-2 text-sm text-foreground">
                         <Truck className="h-4 w-4 text-orange-600" />
                         Cargo
                       </Label>
@@ -422,7 +422,7 @@ export function AdvancedSearch() {
             {loading && (
               <div className="text-center py-16">
                 <Search className="h-16 w-16 mx-auto mb-4 text-primary animate-spin" />
-                <h2 className="text-xl font-semibold mb-2">Searching...</h2>
+                <h2 className="text-xl font-semibold mb-2 text-foreground">Searching...</h2>
                 <p className="text-muted-foreground">Finding results for "{filters.query}"</p>
               </div>
             )}
@@ -431,7 +431,7 @@ export function AdvancedSearch() {
             {!hasSearched && !loading && (
               <div className="text-center py-16">
                 <Search className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                <h2 className="text-xl font-semibold mb-2">Ready to Search</h2>
+                <h2 className="text-xl font-semibold mb-2 text-foreground">Ready to Search</h2>
                 <p className="text-muted-foreground">Enter your search terms and click Search to get started</p>
               </div>
             )}
@@ -440,7 +440,7 @@ export function AdvancedSearch() {
             {hasSearched && !loading && totalResults === 0 && (
               <div className="text-center py-16">
                 <Search className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                <h2 className="text-xl font-semibold mb-2">No results found</h2>
+                <h2 className="text-xl font-semibold mb-2 text-foreground">No results found</h2>
                 <p className="text-muted-foreground mb-4">
                   Try adjusting your search terms or filters
                 </p>
@@ -455,7 +455,7 @@ export function AdvancedSearch() {
               <>
                 {/* Results Header */}
                 <div className="mb-6">
-                  <h2 className="text-2xl font-bold mb-2">
+                  <h2 className="text-2xl font-bold mb-2 text-foreground">
                     Search Results
                   </h2>
                   <p className="text-muted-foreground">
@@ -482,7 +482,7 @@ export function AdvancedSearch() {
                   <TabsContent value="all" className="space-y-8">
                     {searchResults.items.length > 0 && (
                       <div>
-                        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-foreground">
                           <Package className="h-5 w-5" />
                           Items ({searchResults.items.length})
                         </h3>
@@ -492,7 +492,7 @@ export function AdvancedSearch() {
                     
                     {searchResults.buildings.length > 0 && (
                       <div>
-                        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-foreground">
                           <Building className="h-5 w-5" />
                           Buildings ({searchResults.buildings.length})
                         </h3>
@@ -502,7 +502,7 @@ export function AdvancedSearch() {
                     
                     {searchResults.cargo.length > 0 && (
                       <div>
-                        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2 text-foreground">
                           <Truck className="h-5 w-5" />
                           Cargo ({searchResults.cargo.length})
                         </h3>

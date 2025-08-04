@@ -12,11 +12,12 @@ export function SearchResults() {
   const navigate = useNavigate()
   const query = searchParams.get('q') || ''
   const [searchResults, setSearchResults] = useState<SearchAllResponse | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!query) {
+      setLoading(false)
       return
     }
 
@@ -101,7 +102,7 @@ export function SearchResults() {
                   <Badge variant="secondary" className={getItemTypeColor(item.type)}>
                     {item.type}
                   </Badge>
-                  <span className="text-sm">
+                  <span className="text-sm text-muted-foreground">
                     {Math.round(item.score)}% match
                   </span>
                 </div>
@@ -145,6 +146,91 @@ export function SearchResults() {
 
   const totalResults = searchResults ? 
     searchResults.items.length + searchResults.buildings.length + searchResults.cargo.length : 0
+
+  // Example recipes to show when no search query
+  const exampleRecipes = [
+    { id: 2020003, name: "Stone Axe", type: "item" },
+    { id: 2020007, name: "Wooden Pickaxe", type: "item" },
+    { id: 2020010, name: "Campfire", type: "building" },
+    { id: 2020015, name: "Storage Chest", type: "building" },
+    { id: 2020012, name: "Stone Knife", type: "item" },
+    { id: 2020025, name: "Rope", type: "item" },
+    { id: 2020030, name: "Workbench", type: "building" },
+    { id: 2020040, name: "Iron Ingot", type: "item" },
+    { id: 2020050, name: "Leather Armor", type: "item" }
+  ]
+
+  // Show example recipes when no query
+  if (!query && !loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="mb-8 text-center">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              Recipe Explorer
+            </h1>
+            <p className="text-muted-foreground">
+              Discover items, buildings, and cargo in Bitcraft. Try searching above or explore these popular recipes:
+            </p>
+          </div>
+
+          {/* Example Recipes */}
+          <div className="space-y-6">
+            <h2 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+              <Package className="h-6 w-6" />
+              Popular Recipes
+            </h2>
+            
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {exampleRecipes.map((recipe) => (
+                <Card 
+                  key={recipe.id}
+                  className="cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border-2 hover:border-primary/50"
+                  onClick={() => navigate(`/${recipe.type}/${recipe.id}`)}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="text-primary">
+                          {getItemIcon(recipe.type)}
+                        </div>
+                        <CardTitle className="text-lg">{recipe.name}</CardTitle>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <CardDescription>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="secondary" className={getItemTypeColor(recipe.type)}>
+                          {recipe.type}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          Click to explore
+                        </span>
+                      </div>
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="mt-12 text-center space-y-4">
+              <h3 className="text-xl font-semibold text-foreground">Looking for something specific?</h3>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button variant="outline" size="lg" asChild>
+                  <Link to="/search/advanced">
+                    <Settings2 className="h-4 w-4 mr-2" />
+                    Advanced Search
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
