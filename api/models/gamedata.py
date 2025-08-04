@@ -1,4 +1,3 @@
-
 from rapidfuzz import fuzz, process
 from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, Text, select, text
 from sqlalchemy.exc import OperationalError, ProgrammingError
@@ -176,6 +175,14 @@ class GameBuildingRecipeOrm(Base):
     required_paving_tier: Mapped[int] = mapped_column(Integer, nullable=False)
     actions_required: Mapped[int] = mapped_column(Integer, nullable=False)
     instantly_built: Mapped[bool] = mapped_column(Boolean, nullable=False)
+
+    @classmethod
+    async def get_by_id(cls, building_recipe_id: int) -> "GameBuildingRecipeOrm":
+        async with SessionLocal() as session:
+            result = await session.execute(
+                select(cls).filter(cls.id == building_recipe_id),
+            )
+            return result.scalar_one_or_none()
 
 
 class SearchResult:
@@ -489,6 +496,7 @@ async def init_game_data() -> None:
     from helpers import (  # noqa: PLC0415
         load_building_descriptions,
         load_building_recipes,
+        load_building_types,
         load_item_descriptions,
         load_item_recipes,
     )
@@ -496,7 +504,8 @@ async def init_game_data() -> None:
     item_recipes = load_item_recipes()
     _, item_by_id = load_item_descriptions()
     _, building_recipes = load_building_recipes()
-    building_descriptions = load_building_descriptions()
+    # building_descriptions = load_building_descriptions()
+    building_types = load_building_types()
 
     # fill out the item data
     async with SessionLocal() as db:
@@ -570,14 +579,12 @@ async def init_game_data() -> None:
 
     # fill out the building data
     async with SessionLocal() as db:
-        for building_id, building_obj in building_descriptions.items():
-            # Extract category ID from list format [category_id, metadata]
-            category_id = building_obj["category"][0] if isinstance(building_obj["category"], list) else building_obj["category"]
+        for building_id, building_obj in building_types.items():
 
             building_orm = GameBuildingTypeOrm(
                 building_id=building_id,
                 name=building_obj["name"],
-                category=category_id,
+                category=building_obj["category"][0],
             )
             db.add(building_orm)
 

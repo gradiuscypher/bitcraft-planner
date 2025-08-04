@@ -29,7 +29,12 @@ async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     # Shutdown: Add any cleanup code here if needed
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    title="Bitcraft Planner API",
+    description="API for managing Bitcraft game data and user projects",
+    version="1.0.0",
+)
 
 # ref: https://github.com/tiangolo/fastapi/discussions/6678
 @app.exception_handler(RequestValidationError)

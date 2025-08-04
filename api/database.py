@@ -63,7 +63,7 @@ async def init_database() -> None:
         GameItemOrm,
         GameItemRecipeOrm,
     )
-    from models.projects import ProjectOrm  # noqa: F401, PLC0415
+    from models.projects import ProjectOrm, ProjectItemOrm  # noqa: F401, PLC0415
     from models.users import (  # noqa: F401, PLC0415
         UserGroupMembership,
         UserGroupOrm,

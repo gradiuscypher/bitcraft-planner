@@ -46,6 +46,7 @@ class ProjectItemOrm(Base):
     __tablename__ = "project_items"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("game_items.id"), nullable=False)
     item: Mapped["GameItemOrm"] = relationship("GameItemOrm")
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     count: Mapped[int] = mapped_column(Integer, nullable=False)

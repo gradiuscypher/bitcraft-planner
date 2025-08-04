@@ -10,6 +10,7 @@ load_dotenv()
 BITCRAFT_GAMEDATA_DIR = os.getenv("BITCRAFT_GAMEDATA_DIR")
 BUILDING_RECIPES_FILE = f"{BITCRAFT_GAMEDATA_DIR}/construction_recipe_desc.json"
 BUILDING_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/building_desc.json"
+BUILDING_TYPES_FILE = f"{BITCRAFT_GAMEDATA_DIR}/building_type_desc.json"
 CRAFTING_RECIPES_FILE = f"{BITCRAFT_GAMEDATA_DIR}/crafting_recipe_desc.json"
 CARGO_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/cargo_desc.json"
 ITEM_DESCRIPTIONS_FILE = f"{BITCRAFT_GAMEDATA_DIR}/item_desc.json"
@@ -36,6 +37,15 @@ def load_building_descriptions() -> dict[int, Any]:
         for b in building_descriptions:
             building_by_id[b["id"]] = b
         return building_by_id
+
+def load_building_types() -> dict[int, Any]:
+
+    with open(BUILDING_TYPES_FILE) as f:
+        building_types = json.load(f)
+        building_types_by_id: dict[str, Any] = {}
+        for b in building_types:
+            building_types_by_id[b["id"]] = b
+        return building_types_by_id
 
 
 def load_cargo_descriptions() -> tuple[dict[str, Any], dict[int, Any]]:

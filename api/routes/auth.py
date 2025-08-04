@@ -1,11 +1,12 @@
 import logging
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Annotated, Any
 from urllib.parse import urlencode
 
 import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from itsdangerous import URLSafeTimedSerializer
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -34,6 +35,9 @@ serializer = URLSafeTimedSerializer(JWT_SECRET_KEY)
 
 # Create the router
 auth = APIRouter(prefix="/auth", tags=["authentication"])
+
+# Define the security scheme for Bearer token authentication
+security = HTTPBearer()
 
 
 class UserResponse(BaseModel):
@@ -133,20 +137,12 @@ def verify_jwt_token(token: str) -> dict[str, Any] | None:
 
 
 async def get_current_user(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> UserOrm:
     """FastAPI dependency to get current authenticated user"""
-    # Get token from Authorization header
-    authorization = request.headers.get("Authorization")
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid authorization header",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    token = authorization.split(" ")[1]
+    # Get token from the credentials
+    token = credentials.credentials
     payload = verify_jwt_token(token)
 
     if not payload:
@@ -198,7 +194,7 @@ async def login():
 
 
 @auth.get("/callback", response_model=CallbackResponse)
-async def callback(code: str, db: AsyncSession = Depends(get_db)):
+async def callback(code: str, db: Annotated[AsyncSession, Depends(get_db)]):
     """Handle Discord OAuth callback"""
     if not code:
         raise HTTPException(
@@ -261,7 +257,7 @@ async def callback(code: str, db: AsyncSession = Depends(get_db)):
 
 
 @auth.get("/me")
-async def get_me(current_user: UserOrm = Depends(get_current_user)) -> UserResponse:
+async def get_me(current_user: Annotated[UserOrm, Depends(get_current_user)]) -> UserResponse:
     """Get current user information"""
     return UserResponse(
         id=current_user.id,

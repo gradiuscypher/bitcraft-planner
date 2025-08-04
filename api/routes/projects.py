@@ -83,7 +83,15 @@ async def create_project(project: CreateProjectRequest, current_user: Annotated[
     db.add(project_orm)
     await db.commit()
     await db.refresh(project_orm)
-    return Project.model_validate(project_orm)
+
+    # Reload the project with items relationship eagerly loaded
+    result = await db.execute(
+        select(ProjectOrm)
+        .where(ProjectOrm.id == project_orm.id)
+        .options(selectinload(ProjectOrm.items)),
+    )
+    project_with_items = result.scalar_one()
+    return Project.model_validate(project_with_items)
 
 
 @projects.put("/{project_id}")
@@ -96,6 +104,15 @@ async def update_project(project_id: int, project: CreateProjectRequest, current
         raise HTTPException(status_code=403, detail="You do not have access to this project")
     project_orm.name = project.name
     await db.commit()
+
+    # Reload the project with items relationship eagerly loaded
+    result = await db.execute(
+        select(ProjectOrm)
+        .where(ProjectOrm.id == project_id)
+        .options(selectinload(ProjectOrm.items)),
+    )
+    updated_project = result.scalar_one()
+    return Project.model_validate(updated_project)
 
 
 @projects.delete("/{project_id}")
@@ -126,10 +143,41 @@ async def add_item_to_project(project_id: int, item: AddItemToProjectRequest, cu
     project_item_orm = ProjectItemOrm(
         project_id=project_id,
         item_id=item.item_id,
-        amount=item.amount,
+        name=item_orm.name,
+        count=item.amount,
     )
     db.add(project_item_orm)
     await db.commit()
+
+    # Reload the project with items relationship eagerly loaded
+    result = await db.execute(
+        select(ProjectOrm)
+        .where(ProjectOrm.id == project_id)
+        .options(selectinload(ProjectOrm.items)),
+    )
+    updated_project = result.scalar_one()
+    return Project.model_validate(updated_project)
+
+
+@projects.delete("/{project_id}/items/{item_id}")
+async def remove_item_from_project(project_id: int, item_id: int, current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> Project:
+    result = await db.execute(select(ProjectItemOrm).where(ProjectItemOrm.project_id == project_id, ProjectItemOrm.item_id == item_id))
+    project_item_orm = result.scalar_one_or_none()
+    if not project_item_orm:
+        raise HTTPException(status_code=404, detail="Item not found in project")
+    if not project_item_orm.project.does_user_have_access(current_user.id):
+        raise HTTPException(status_code=403, detail="You do not have access to this project")
+    await db.delete(project_item_orm)
+    await db.commit()
+
+    # Reload the project with items relationship eagerly loaded
+    result = await db.execute(
+        select(ProjectOrm)
+        .where(ProjectOrm.id == project_id)
+        .options(selectinload(ProjectOrm.items)),
+    )
+    updated_project = result.scalar_one()
+    return Project.model_validate(updated_project)
 
 
 # Group project endpoints
