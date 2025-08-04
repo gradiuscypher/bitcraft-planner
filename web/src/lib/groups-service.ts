@@ -84,6 +84,20 @@ class GroupsService {
       method: 'DELETE',
     });
   }
+
+  // Promote user to co-owner
+  async promoteUserToCoOwner(groupId: number, discordId: string): Promise<void> {
+    return this.makeRequest<void>(API_ENDPOINTS.GROUPS_PROMOTE_USER(groupId, discordId), {
+      method: 'POST',
+    });
+  }
+
+  // Demote co-owner to member
+  async demoteCoOwnerToMember(groupId: number, discordId: string): Promise<void> {
+    return this.makeRequest<void>(API_ENDPOINTS.GROUPS_DEMOTE_USER(groupId, discordId), {
+      method: 'DELETE',
+    });
+  }
 }
 
 // Export a singleton instance

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { projectsService } from '@/lib/projects-service';
+import { groupsService } from '@/lib/groups-service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,22 +29,27 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Plus, FolderOpen, Settings, Trash2, Calendar, Crown } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProtectedRoute } from '@/components/protected-route';
 import type { ProjectWithItems } from '@/types/projects';
+import type { UserGroup } from '@/types/groups';
 
 export function ProjectsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<ProjectWithItems[]>([]);
+  const [groups, setGroups] = useState<UserGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('personal');
   const [isCreating, setIsCreating] = useState(false);
 
-  // Load projects on component mount
+  // Load projects and groups on component mount
   useEffect(() => {
     loadProjects();
+    loadGroups();
   }, []);
 
   const loadProjects = async () => {
@@ -60,6 +66,16 @@ export function ProjectsPage() {
     }
   };
 
+  const loadGroups = async () => {
+    try {
+      const userGroups = await groupsService.getUserGroups();
+      setGroups(userGroups);
+    } catch (err) {
+      console.error('Failed to load groups:', err);
+      // Don't show error for groups, as it's not critical
+    }
+  };
+
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return;
 
@@ -67,9 +83,10 @@ export function ProjectsPage() {
       setIsCreating(true);
       await projectsService.createProject({
         name: newProjectName.trim(),
-        group_id: null, // For now, not associating with groups
+        group_id: selectedGroupId === 'personal' ? null : parseInt(selectedGroupId),
       });
       setNewProjectName('');
+      setSelectedGroupId('personal');
       setIsCreateDialogOpen(false);
       await loadProjects(); // Refresh the list
     } catch (err) {
@@ -104,6 +121,11 @@ export function ProjectsPage() {
 
   const getItemsCount = (project: ProjectWithItems) => {
     return project.items?.length || 0;
+  };
+
+  const getProjectGroup = (project: ProjectWithItems) => {
+    if (!project.group_id) return null;
+    return groups.find(group => group.id === project.group_id);
   };
 
   if (loading) {
@@ -161,6 +183,25 @@ export function ProjectsPage() {
                       }
                     }}
                   />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="project-group">Project Type</Label>
+                  <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select project type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="personal">Personal Project</SelectItem>
+                      {groups
+                        .filter((group) => group.can_create_projects)
+                        .map((group) => (
+                          <SelectItem key={group.id} value={group.id.toString()}>
+                            Group: {group.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               
@@ -284,6 +325,14 @@ export function ProjectsPage() {
                 
                 <CardContent>
                   <div className="space-y-3">
+                    {/* Project Type */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Type</span>
+                      <Badge variant={project.group_id ? "secondary" : "default"}>
+                        {project.group_id ? `Group: ${getProjectGroup(project)?.name || 'Unknown'}` : "Personal"}
+                      </Badge>
+                    </div>
+
                     {/* Project Status */}
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Status</span>

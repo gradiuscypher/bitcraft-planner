@@ -1,11 +1,10 @@
 import logging
-from typing import Annotated
 
 from fastapi import APIRouter, HTTPException
 
+from helpers import load_cargo_descriptions
 from models.gamedata import GameCargoOrm
 from models.items import Cargo
-from helpers import load_cargo_descriptions
 
 logger = logging.getLogger(__name__)
 

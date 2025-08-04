@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { AddToProject } from "@/components/add-to-project"
 import { apiService, type BuildingDetail } from '@/lib/api'
 
 export function BuildingDetail() {
@@ -235,6 +236,17 @@ export function BuildingDetail() {
                 <CardTitle className="text-lg">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
+                <AddToProject 
+                  itemId={building.id}
+                  itemName={building.name}
+                  itemType="building"
+                  trigger={
+                    <Button variant="outline" className="w-full justify-start">
+                      <Building className="h-4 w-4 mr-2" />
+                      Add to Project
+                    </Button>
+                  }
+                />
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"

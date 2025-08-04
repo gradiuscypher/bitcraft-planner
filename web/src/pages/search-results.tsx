@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { Search, Package, Building, Truck, ChevronRight, Settings2 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AddToProject } from "@/components/add-to-project"
 import { apiService, type SearchResult, type SearchAllResponse } from '@/lib/api'
 
 export function SearchResults() {
@@ -12,12 +13,27 @@ export function SearchResults() {
   const navigate = useNavigate()
   const query = searchParams.get('q') || ''
   const [searchResults, setSearchResults] = useState<SearchAllResponse | null>(null)
+  const [randomItems, setRandomItems] = useState<SearchAllResponse | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadingRandom, setLoadingRandom] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!query) {
       setLoading(false)
+      // Load random items when no query
+      const loadRandomItems = async () => {
+        setLoadingRandom(true)
+        try {
+          const results = await apiService.getRandomItems(6)
+          setRandomItems(results)
+        } catch (err) {
+          console.error('Failed to load random items:', err)
+        } finally {
+          setLoadingRandom(false)
+        }
+      }
+      loadRandomItems()
       return
     }
 
@@ -84,10 +100,12 @@ export function SearchResults() {
         {results.map((item) => (
           <Card 
             key={`${item.type}-${item.id}`}
-            className="cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border-2 hover:border-primary/50"
-            onClick={() => handleItemClick(item)}
+            className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border-2 hover:border-primary/50"
           >
-            <CardHeader className="pb-3">
+            <CardHeader 
+              className="pb-3 cursor-pointer"
+              onClick={() => handleItemClick(item)}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="text-primary">
@@ -108,6 +126,19 @@ export function SearchResults() {
                 </div>
               </CardDescription>
             </CardHeader>
+            <CardContent className="pt-0">
+              <AddToProject
+                itemId={item.id}
+                itemName={item.name}
+                itemType={item.type as 'item' | 'building' | 'cargo'}
+                trigger={
+                  <Button variant="outline" size="sm" className="w-full">
+                    <Package className="h-4 w-4 mr-2" />
+                    Add to Project
+                  </Button>
+                }
+              />
+            </CardContent>
           </Card>
         ))}
       </div>
@@ -147,21 +178,20 @@ export function SearchResults() {
   const totalResults = searchResults ? 
     searchResults.items.length + searchResults.buildings.length + searchResults.cargo.length : 0
 
-  // Example recipes to show when no search query
-  const exampleRecipes = [
-    { id: 2020003, name: "Stone Axe", type: "item" },
-    { id: 2020007, name: "Wooden Pickaxe", type: "item" },
-    { id: 2020010, name: "Campfire", type: "building" },
-    { id: 2020015, name: "Storage Chest", type: "building" },
-    { id: 2020012, name: "Stone Knife", type: "item" },
-    { id: 2020025, name: "Rope", type: "item" },
-    { id: 2020030, name: "Workbench", type: "building" },
-    { id: 2020040, name: "Iron Ingot", type: "item" },
-    { id: 2020050, name: "Leather Armor", type: "item" }
-  ]
+  // Combine random items from all categories for display
+  const getRandomItemsForDisplay = () => {
+    if (!randomItems) return []
+    return [
+      ...randomItems.items.map(item => ({ ...item, type: 'item' })),
+      ...randomItems.buildings.map(item => ({ ...item, type: 'building' })),
+      ...randomItems.cargo.map(item => ({ ...item, type: 'cargo' }))
+    ]
+  }
 
-  // Show example recipes when no query
+  // Show random items when no query
   if (!query && !loading) {
+    const randomItemsToShow = getRandomItemsForDisplay()
+    
     return (
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
@@ -171,48 +201,75 @@ export function SearchResults() {
               Recipe Explorer
             </h1>
             <p className="text-muted-foreground">
-              Discover items, buildings, and cargo in Bitcraft. Try searching above or explore these popular recipes:
+              Discover items, buildings, and cargo in Bitcraft. Try searching above or explore these featured items:
             </p>
           </div>
 
-          {/* Example Recipes */}
+          {/* Random Items */}
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold text-foreground flex items-center gap-2">
               <Package className="h-6 w-6" />
-              Popular Recipes
+              Featured Items
             </h2>
             
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {exampleRecipes.map((recipe) => (
-                <Card 
-                  key={recipe.id}
-                  className="cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border-2 hover:border-primary/50"
-                  onClick={() => navigate(`/${recipe.type}/${recipe.id}`)}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="text-primary">
-                          {getItemIcon(recipe.type)}
+            {loadingRandom ? (
+              <div className="text-center py-8">
+                <Search className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                <p className="text-muted-foreground">Loading featured items...</p>
+              </div>
+            ) : randomItemsToShow.length > 0 ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {randomItemsToShow.map((item) => (
+                  <Card 
+                    key={`${item.type}-${item.id}`}
+                    className="hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border-2 hover:border-primary/50"
+                  >
+                    <CardHeader 
+                      className="pb-3 cursor-pointer"
+                      onClick={() => navigate(`/${item.type}/${item.id}`)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="text-primary">
+                            {getItemIcon(item.type)}
+                          </div>
+                          <CardTitle className="text-lg">{item.name}</CardTitle>
                         </div>
-                        <CardTitle className="text-lg">{recipe.name}</CardTitle>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <CardDescription>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="secondary" className={getItemTypeColor(recipe.type)}>
-                          {recipe.type}
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          Click to explore
-                        </span>
-                      </div>
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
+                      <CardDescription>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="secondary" className={getItemTypeColor(item.type)}>
+                            {item.type}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            Click to explore
+                          </span>
+                        </div>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <AddToProject
+                        itemId={item.id}
+                        itemName={item.name}
+                        itemType={item.type as 'item' | 'building' | 'cargo'}
+                        trigger={
+                          <Button variant="outline" size="sm" className="w-full">
+                            <Package className="h-4 w-4 mr-2" />
+                            Add to Project
+                          </Button>
+                        }
+                      />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="h-8 w-8 mx-auto mb-4" />
+                <p>No featured items available right now</p>
+              </div>
+            )}
 
             {/* Quick Actions */}
             <div className="mt-12 text-center space-y-4">

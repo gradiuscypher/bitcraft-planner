@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { groupsService } from '@/lib/groups-service';
+import { projectsService } from '@/lib/projects-service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,14 +28,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, Users, Settings, Trash2, UserPlus, UserMinus, Calendar, Crown } from 'lucide-react';
+import { Plus, Users, Settings, Trash2, UserPlus, UserMinus, Calendar, Crown, FolderOpen } from 'lucide-react';
 import { ProtectedRoute } from '@/components/protected-route';
 import type { UserGroup } from '@/types/groups';
+import type { ProjectWithItems } from '@/types/projects';
 
 export function GroupsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [groups, setGroups] = useState<UserGroup[]>([]);
+  const [projects, setProjects] = useState<ProjectWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -47,20 +50,24 @@ export function GroupsPage() {
   const [memberIdentifier, setMemberIdentifier] = useState('');
   const [isAddingMember, setIsAddingMember] = useState(false);
 
-  // Load groups on component mount
+  // Load groups and projects on component mount
   useEffect(() => {
-    loadGroups();
+    loadData();
   }, []);
 
-  const loadGroups = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const userGroups = await groupsService.getUserGroups();
+      const [userGroups, userProjects] = await Promise.all([
+        groupsService.getUserGroups(),
+        projectsService.getUserProjects(),
+      ]);
       setGroups(userGroups);
+      setProjects(userProjects);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load groups');
-      console.error('Failed to load groups:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+      console.error('Failed to load data:', err);
     } finally {
       setLoading(false);
     }
@@ -74,7 +81,7 @@ export function GroupsPage() {
       await groupsService.createGroup(newGroupName.trim());
       setNewGroupName('');
       setIsCreateDialogOpen(false);
-      await loadGroups(); // Refresh the list
+      await loadData(); // Refresh the list
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create group');
       console.error('Failed to create group:', err);
@@ -86,7 +93,7 @@ export function GroupsPage() {
   const handleDeleteGroup = async (groupId: number) => {
     try {
       await groupsService.deleteGroup(groupId);
-      await loadGroups(); // Refresh the list
+      await loadData(); // Refresh the list
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete group');
       console.error('Failed to delete group:', err);
@@ -112,7 +119,7 @@ export function GroupsPage() {
       setMemberIdentifier('');
       setIsAddMemberDialogOpen(false);
       setSelectedGroupId(null);
-      await loadGroups(); // Refresh the list
+      await loadData(); // Refresh the list
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add member to group');
       console.error('Failed to add member:', err);
@@ -145,6 +152,14 @@ export function GroupsPage() {
 
   const isGroupOwner = (group: UserGroup) => {
     return user?.id === group.owner_id;
+  };
+
+  const getGroupProjects = (groupId: number) => {
+    return projects.filter(project => project.group_id === groupId);
+  };
+
+  const getGroupProjectsCount = (groupId: number) => {
+    return getGroupProjects(groupId).length;
   };
 
   if (loading) {
@@ -384,6 +399,25 @@ export function GroupsPage() {
                         {isGroupOwner(group) ? "Owner" : "Member"}
                       </Badge>
                     </div>
+
+                    {/* Projects Count */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Projects</span>
+                      <Badge variant="outline" className="flex items-center gap-1">
+                        <FolderOpen className="h-3 w-3" />
+                        {getGroupProjectsCount(group.id)} projects
+                      </Badge>
+                    </div>
+                    
+                    {/* Recent Project Preview */}
+                    {getGroupProjectsCount(group.id) > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Recent</span>
+                        <span className="text-sm font-medium text-foreground truncate max-w-[120px]" title={getGroupProjects(group.id)[0]?.name}>
+                          {getGroupProjects(group.id)[0]?.name}
+                        </span>
+                      </div>
+                    )}
                     
                     {/* Group Actions */}
                     <div className="flex items-center gap-2 pt-2">

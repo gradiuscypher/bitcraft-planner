@@ -2,9 +2,10 @@
 Pytest configuration for BitCraft API tests.
 """
 
+import asyncio
+
 import pytest  # type: ignore[import-untyped]
 from fastapi.testclient import TestClient
-import asyncio
 
 from api import app
 from database import SessionLocal, init_database
@@ -39,7 +40,7 @@ TEST_USER_1_DATA = {
     "discriminator": "1234",
     "global_name": "Test User",
     "avatar": "avatar_hash",
-    "email": "test@example.com"
+    "email": "test@example.com",
 }
 
 TEST_USER_2_DATA = {
@@ -48,7 +49,7 @@ TEST_USER_2_DATA = {
     "discriminator": "5678",
     "global_name": "Test User 2",
     "avatar": "avatar_hash_2",
-    "email": "test2@example.com"
+    "email": "test2@example.com",
 }
 
 
@@ -67,15 +68,15 @@ class MockUser:
 async def ensure_test_users_exist():
     """Ensure test users exist in the database."""
     await init_database()
-    
+
     async with SessionLocal() as session:
         # Check if user 1 exists
         user1 = User(**TEST_USER_1_DATA)
         session.add(user1)
-        
+
         user2 = User(**TEST_USER_2_DATA)
         session.add(user2)
-        
+
         try:
             await session.commit()
         except Exception:
@@ -111,7 +112,7 @@ def authenticated_client(mock_user):
     """Create a test client with mocked authentication."""
     def mock_get_current_user():
         return mock_user
-    
+
     app.dependency_overrides[get_current_user] = mock_get_current_user
     client = TestClient(app)
     yield client
@@ -124,7 +125,7 @@ def authenticated_client_2(mock_user_2):
     """Create a test client with mocked authentication for second user."""
     def mock_get_current_user():
         return mock_user_2
-    
+
     app.dependency_overrides[get_current_user] = mock_get_current_user
     client = TestClient(app)
     yield client

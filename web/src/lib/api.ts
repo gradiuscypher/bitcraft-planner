@@ -149,6 +149,13 @@ class ApiService {
     })
     return this.makeRequest<SearchResult | null>(`/items/search/best?${params}`)
   }
+
+  async getRandomItems(count: number = 6): Promise<SearchAllResponse> {
+    const params = new URLSearchParams({
+      count: count.toString()
+    })
+    return this.makeRequest<SearchAllResponse>(`/items/random?${params}`)
+  }
 }
 
 export const apiService = new ApiService() 

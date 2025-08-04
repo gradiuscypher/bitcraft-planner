@@ -3,9 +3,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import func, select
 
 from database import AsyncSession, get_db
 from models.gamedata import (
+    GameBuildingRecipeOrm,
+    GameCargoOrm,
     GameItemOrm,
     GameItemRecipeOrm,
     GameItemRecipeProducedOrm,
@@ -68,6 +71,73 @@ async def search_items(
         results=results,
         query=query,
         search_type="items",
+    )
+
+
+@items.get("/random")
+async def get_random_items(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    count: int = 6,
+) -> SearchAllResponse:
+    """Get random items, buildings, and cargo for the homepage."""
+
+    # Get random items from each category (2 items, 2 buildings, 2 cargo)
+    items_per_category = max(1, count // 3)
+
+    # Get random items
+    items_result = await db.execute(
+        select(GameItemOrm).order_by(func.random()).limit(items_per_category),
+    )
+    random_items = items_result.scalars().all()
+
+    # Get random buildings
+    buildings_result = await db.execute(
+        select(GameBuildingRecipeOrm).order_by(func.random()).limit(items_per_category),
+    )
+    random_buildings = buildings_result.scalars().all()
+
+    # Get random cargo
+    cargo_result = await db.execute(
+        select(GameCargoOrm).order_by(func.random()).limit(items_per_category),
+    )
+    random_cargo = cargo_result.scalars().all()
+
+    # Convert to SearchResult format
+    items = [
+        SearchResult(
+            name=item.name,
+            score=100.0,  # Perfect match since it's curated
+            id=item.item_id,
+            type="item",
+        )
+        for item in random_items
+    ]
+
+    buildings = [
+        SearchResult(
+            name=building.name,
+            score=100.0,
+            id=building.id,
+            type="building",
+        )
+        for building in random_buildings
+    ]
+
+    cargo = [
+        SearchResult(
+            name=cargo_item.name,
+            score=100.0,
+            id=cargo_item.cargo_id,
+            type="cargo",
+        )
+        for cargo_item in random_cargo
+    ]
+
+    return SearchAllResponse(
+        items=items,
+        buildings=buildings,
+        cargo=cargo,
+        query="random",
     )
 
 

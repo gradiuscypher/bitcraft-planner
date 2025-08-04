@@ -26,7 +26,9 @@ import {
   Crown,
   Calendar,
   Users,
-  Trash2
+  Trash2,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { ProtectedRoute } from '@/components/protected-route';
 import type { ProjectWithItems } from '@/types/projects';
@@ -63,19 +65,18 @@ export function ProjectDetailPage() {
     return user?.id === project.owner_id;
   };
 
-  const getTotalItems = () => {
+  const getTotalTargetItems = () => {
+    return project?.items?.reduce((sum, item) => sum + item.target_count, 0) || 0;
+  };
+
+  const getTotalCompletedItems = () => {
     return project?.items?.reduce((sum, item) => sum + item.count, 0) || 0;
   };
 
-  const getCompletedItems = () => {
-    // For now, we'll show mock progress. In a real app, you'd track actual progress
-    return Math.floor(getTotalItems() * 0.3); // 30% completed as placeholder
-  };
-
   const getProgressPercentage = () => {
-    const total = getTotalItems();
+    const total = getTotalTargetItems();
     if (total === 0) return 0;
-    return Math.round((getCompletedItems() / total) * 100);
+    return Math.round((getTotalCompletedItems() / total) * 100);
   };
 
   const handleDeleteProject = async () => {
@@ -87,6 +88,30 @@ export function ProjectDetailPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete project');
       console.error('Failed to delete project:', err);
+    }
+  };
+
+  const handleRemoveItem = async (itemId: number) => {
+    if (!project) return;
+    
+    try {
+      const updatedProject = await projectsService.removeItemFromProject(project.id, itemId);
+      setProject(updatedProject);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove item from project');
+      console.error('Failed to remove item from project:', err);
+    }
+  };
+
+  const handleUpdateItemCount = async (itemId: number, newCount: number) => {
+    if (!project) return;
+    
+    try {
+      const updatedProject = await projectsService.updateProjectItemCount(project.id, itemId, newCount);
+      setProject(updatedProject);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update item count');
+      console.error('Failed to update item count:', err);
     }
   };
 
@@ -214,21 +239,21 @@ export function ProjectDetailPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-foreground">
-                      {getCompletedItems()}
+                      {getTotalCompletedItems()}
                     </div>
                     <div className="text-sm text-muted-foreground">Items Crafted</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-foreground">
-                      {getTotalItems() - getCompletedItems()}
+                      {getTotalTargetItems() - getTotalCompletedItems()}
                     </div>
                     <div className="text-sm text-muted-foreground">Items Remaining</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-foreground">
-                      {getTotalItems()}
+                      {getTotalTargetItems()}
                     </div>
-                    <div className="text-sm text-muted-foreground">Total Items</div>
+                    <div className="text-sm text-muted-foreground">Total Target Items</div>
                   </div>
                 </div>
                 
@@ -266,16 +291,14 @@ export function ProjectDetailPage() {
                       Add items to this project to start tracking your crafting progress
                     </p>
                     {isProjectOwner(project) && (
-                      <Button>Add Items</Button>
+                      <Button onClick={() => navigate('/search/advanced')}>Add Items</Button>
                     )}
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {project.items.map((item) => {
-                      // Mock progress for individual items (in real app, this would come from data)
-                      const itemCompleted = Math.floor(item.count * (0.2 + Math.random() * 0.6));
-                      const itemProgress = Math.round((itemCompleted / item.count) * 100);
-                      const isCompleted = itemCompleted >= item.count;
+                      const itemProgress = item.target_count > 0 ? Math.round((item.count / item.target_count) * 100) : 0;
+                      const isCompleted = item.count >= item.target_count;
                       
                       return (
                         <div key={item.id} className="border rounded-lg p-4 space-y-3">
@@ -296,13 +319,66 @@ export function ProjectDetailPage() {
                                 )}
                               </div>
                               <p className="text-sm text-muted-foreground mt-1">
-                                {itemCompleted} of {item.count} crafted
+                                {item.count} of {item.target_count} crafted
                               </p>
+                              
+                              {/* Count Management Controls */}
+                              {isProjectOwner(project) && (
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleUpdateItemCount(item.item_id, Math.max(0, item.count - 1))}
+                                    disabled={item.count <= 0}
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                  <span className="text-sm font-medium min-w-[3ch] text-center">
+                                    {item.count}
+                                  </span>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleUpdateItemCount(item.item_id, Math.min(item.target_count, item.count + 1))}
+                                    disabled={item.count >= item.target_count}
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              )}
                             </div>
-                            <div className="text-right">
-                              <div className="text-sm font-medium">
-                                {itemProgress}%
+                            <div className="flex items-center gap-2">
+                              <div className="text-right">
+                                <div className="text-sm font-medium">
+                                  {itemProgress}%
+                                </div>
                               </div>
+                              {isProjectOwner(project) && (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Remove Item</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to remove "{item.name}" from this project?
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleRemoveItem(item.item_id)}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        Remove Item
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              )}
                             </div>
                           </div>
                           
@@ -310,7 +386,7 @@ export function ProjectDetailPage() {
                             <Progress value={itemProgress} className="h-1.5" />
                             <div className="flex justify-between text-xs text-muted-foreground">
                               <span>Progress</span>
-                              <span>{item.count - itemCompleted} remaining</span>
+                              <span>{item.target_count - item.count} remaining</span>
                             </div>
                           </div>
                         </div>

@@ -20,6 +20,11 @@ class CreateProjectRequest(BaseModel):
 class AddItemToProjectRequest(BaseModel):
     item_id: int
     amount: int
+    item_type: str = "item"  # "item", "building", or "cargo"
+
+
+class UpdateProjectItemCountRequest(BaseModel):
+    count: int
 
 
 class Project(BaseModel):
@@ -38,8 +43,10 @@ class ProjectItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    item_id: int
     name: str
     count: int
+    target_count: int
 
 
 class ProjectItemOrm(Base):
@@ -50,6 +57,7 @@ class ProjectItemOrm(Base):
     item: Mapped["GameItemOrm"] = relationship("GameItemOrm")
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     count: Mapped[int] = mapped_column(Integer, nullable=False)
+    target_count: Mapped[int] = mapped_column(Integer, nullable=False)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     project: Mapped["ProjectOrm"] = relationship("ProjectOrm", back_populates="items")
 
@@ -69,4 +77,16 @@ class ProjectOrm(Base):
     items: Mapped[list["ProjectItemOrm"]] = relationship("ProjectItemOrm", back_populates="project")
 
     def does_user_have_access(self, user_id: int) -> bool:
+        """Check if user can view the project"""
         return self.owner_id == user_id or (self.group_id is not None and self.group.is_user_in_group(user_id))
+
+    def can_user_modify(self, user_id: int) -> bool:
+        """Check if user can modify the project"""
+        # Project owner can always modify
+        if self.owner_id == user_id:
+            return True
+        # For group projects, only group owners and co-owners can modify
+        if self.group_id is not None:
+            return self.group.can_user_manage_group_projects(user_id)
+        # For personal projects, only the owner can modify
+        return False

@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from models.users import UserOrm, UserGroupMembership
+from models.users import UserGroupMembership, UserOrm
 from settings import (
     DISCORD_CLIENT_ID,
     DISCORD_CLIENT_SECRET,
@@ -157,7 +157,7 @@ async def get_current_user(
         select(UserOrm)
         .where(UserOrm.id == payload["user_id"])
         .options(
-            selectinload(UserOrm.group_memberships).selectinload(UserGroupMembership.user_group)
+            selectinload(UserOrm.group_memberships).selectinload(UserGroupMembership.user_group),
         )
     )
     result = await db.execute(stmt)

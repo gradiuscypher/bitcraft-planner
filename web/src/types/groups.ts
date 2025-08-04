@@ -10,12 +10,16 @@ export interface BasicUser {
   updated_at: string;
 }
 
+export interface BasicUserWithRole extends BasicUser {
+  role: 'member' | 'co_owner' | 'owner';
+}
+
 export interface UserGroup {
   id: number;
   name: string;
   owner_id: number;
   created_at: string;
-  updated_at: string;
+  can_create_projects?: boolean;
 }
 
 export interface GroupMember {
@@ -44,5 +48,5 @@ export interface GroupWithMembers extends UserGroup {
 }
 
 export interface GroupWithDetails extends UserGroup {
-  users: BasicUser[];
+  users: BasicUserWithRole[];
 } 

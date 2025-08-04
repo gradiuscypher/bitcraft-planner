@@ -7,8 +7,10 @@ export interface Project {
 
 export interface ProjectItem {
   id: number;
+  item_id: number;
   name: string;
   count: number;
+  target_count: number;
 }
 
 export interface ProjectWithItems extends Project {

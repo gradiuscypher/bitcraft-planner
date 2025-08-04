@@ -11,6 +11,7 @@ import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AddToProject } from "@/components/add-to-project"
 import { apiService, type SearchResult, type SearchAllResponse } from '@/lib/api'
 
 interface AdvancedSearchFilters {
@@ -191,10 +192,12 @@ export function AdvancedSearch() {
         {results.map((item) => (
           <Card 
             key={`${item.type}-${item.id}`}
-            className="cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => handleItemClick(item)}
+            className="hover:shadow-md transition-shadow"
           >
-            <CardHeader className="pb-3">
+            <CardHeader 
+              className="pb-3 cursor-pointer"
+              onClick={() => handleItemClick(item)}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="text-primary">
@@ -214,6 +217,19 @@ export function AdvancedSearch() {
                 </div>
               </CardDescription>
             </CardHeader>
+            <CardContent className="pt-0">
+              <AddToProject
+                itemId={item.id}
+                itemName={item.name}
+                itemType={item.type as 'item' | 'building' | 'cargo'}
+                trigger={
+                  <Button variant="outline" size="sm" className="w-full">
+                    <Package className="h-4 w-4 mr-2" />
+                    Add to Project
+                  </Button>
+                }
+              />
+            </CardContent>
           </Card>
         ))}
       </div>

@@ -494,7 +494,6 @@ class SearchService:
 async def init_game_data() -> None:
     from database import SessionLocal  # noqa: PLC0415
     from helpers import (  # noqa: PLC0415
-        load_building_descriptions,
         load_building_recipes,
         load_building_types,
         load_item_descriptions,

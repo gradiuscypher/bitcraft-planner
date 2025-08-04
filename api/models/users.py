@@ -1,11 +1,19 @@
 from datetime import UTC, datetime
+from enum import Enum
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
+
+
+class GroupMemberRole(str, Enum):
+    MEMBER = "member"
+    CO_OWNER = "co_owner"
+    OWNER = "owner"
 
 if TYPE_CHECKING:
     from models.projects import ProjectOrm
@@ -16,6 +24,7 @@ class UserGroupMembership(Base):
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
     user_group_id: Mapped[int] = mapped_column(ForeignKey("user_groups.id"), primary_key=True)
+    role: Mapped[GroupMemberRole] = mapped_column(SQLEnum(GroupMemberRole), default=GroupMemberRole.MEMBER)
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
 
     # Relationships to the actual objects
@@ -33,6 +42,19 @@ class BasicUser(BaseModel):
     discriminator: str | None = None
     global_name: str | None = None
     avatar: str | None = None
+
+
+class BasicUserWithRole(BaseModel):
+    """User model with group role information"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    discord_id: str
+    username: str
+    discriminator: str | None = None
+    global_name: str | None = None
+    avatar: str | None = None
+    role: GroupMemberRole
 
 
 class User(BaseModel):
@@ -81,6 +103,19 @@ class UserGroup(BaseModel):
     created_at: datetime
     owner_id: int
     users: list[BasicUser]
+    can_create_projects: bool = False  # Will be set based on user's permissions
+
+
+class UserGroupWithRoles(BaseModel):
+    """User group model that includes role information for members"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    created_at: datetime
+    owner_id: int
+    users: list[BasicUserWithRole]
+    can_create_projects: bool = False  # Will be set based on user's permissions
 
 
 class UserGroupOrm(Base):
@@ -100,4 +135,21 @@ class UserGroupOrm(Base):
         return [membership.user for membership in self.user_memberships]
 
     def is_user_in_group(self, user_id: int) -> bool:
+        # Check if user is the group owner
+        if self.owner_id == user_id:
+            return True
+        # Check if user is in the memberships
         return any(membership.user_id == user_id for membership in self.user_memberships)
+
+    def is_user_owner_or_co_owner(self, user_id: int) -> bool:
+        """Check if user is the owner or a co-owner of the group"""
+        if self.owner_id == user_id:
+            return True
+        return any(
+            membership.user_id == user_id and membership.role == GroupMemberRole.CO_OWNER
+            for membership in self.user_memberships
+        )
+
+    def can_user_manage_group_projects(self, user_id: int) -> bool:
+        """Check if user can manage (modify) group projects"""
+        return self.is_user_owner_or_co_owner(user_id)

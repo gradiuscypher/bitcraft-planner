@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { AddToProject } from "@/components/add-to-project"
 import { apiService, type ItemDetail, type BuildingDetail, type CargoDetail, type Recipe, type BuildingType } from '@/lib/api'
 
 type ItemDetailData = ItemDetail | BuildingDetail | CargoDetail
@@ -449,6 +450,17 @@ export function ItemDetail() {
                 <CardTitle className="text-lg">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
+                <AddToProject 
+                  itemId={item.id}
+                  itemName={item.name}
+                  itemType={type as 'item' | 'building' | 'cargo'}
+                  trigger={
+                    <Button variant="outline" className="w-full justify-start">
+                      <Package className="h-4 w-4 mr-2" />
+                      Add to Project
+                    </Button>
+                  }
+                />
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"

@@ -62,10 +62,47 @@ class ProjectsService {
     });
   }
 
+  // Update a project
+  async updateProject(projectId: number, projectData: CreateProjectRequest): Promise<ProjectWithItems> {
+    return this.makeRequest<ProjectWithItems>(API_ENDPOINTS.PROJECTS_BY_ID(projectId), {
+      method: 'PUT',
+      body: JSON.stringify(projectData),
+    });
+  }
+
   // Delete a project
   async deleteProject(projectId: number): Promise<void> {
     return this.makeRequest<void>(API_ENDPOINTS.PROJECTS_BY_ID(projectId), {
       method: 'DELETE',
+    });
+  }
+
+  // Add item to project
+  async addItemToProject(projectId: number, itemId: number, amount: number, itemType = 'item'): Promise<ProjectWithItems> {
+    return this.makeRequest<ProjectWithItems>(`${API_ENDPOINTS.PROJECTS_BY_ID(projectId)}/items`, {
+      method: 'POST',
+      body: JSON.stringify({
+        item_id: itemId,
+        amount: amount,
+        item_type: itemType,
+      }),
+    });
+  }
+
+  // Remove item from project
+  async removeItemFromProject(projectId: number, itemId: number): Promise<ProjectWithItems> {
+    return this.makeRequest<ProjectWithItems>(`${API_ENDPOINTS.PROJECTS_BY_ID(projectId)}/items/${itemId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Update item count in project
+  async updateProjectItemCount(projectId: number, itemId: number, count: number): Promise<ProjectWithItems> {
+    return this.makeRequest<ProjectWithItems>(`${API_ENDPOINTS.PROJECTS_BY_ID(projectId)}/items/${itemId}/count`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        count: count,
+      }),
     });
   }
 }
