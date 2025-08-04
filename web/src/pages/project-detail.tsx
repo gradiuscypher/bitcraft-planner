@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { projectsService } from '@/lib/projects-service';
+import { useProjectPolling, useGroupPolling } from '@/hooks/use-projects-polling';
+import { POLLING_CONFIG } from '@/lib/polling-config';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -36,29 +37,53 @@ import type { ProjectWithItems } from '@/types/projects';
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [project, setProject] = useState<ProjectWithItems | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { user, isLoading: authLoading } = useAuth();
+  const projectIdNum = projectId ? parseInt(projectId) : null;
+  
+  // Use polling hooks for automatic updates
+  const { 
+    data: project, 
+    loading, 
+    error,
+    refresh: refreshProject
+  } = useProjectPolling(projectIdNum, {
+    interval: POLLING_CONFIG.PROJECT_DETAIL_INTERVAL,
+    initialDelay: POLLING_CONFIG.INITIAL_DELAY,
+    enabled: !!user && !authLoading // Only poll when user is authenticated and auth is complete
+  });
+  
+  const { 
+    data: group 
+  } = useGroupPolling(project?.group_id || null, {
+    interval: POLLING_CONFIG.GROUP_DETAIL_INTERVAL,
+    initialDelay: POLLING_CONFIG.INITIAL_DELAY,
+    enabled: !!user && !authLoading && !!project?.group_id // Only poll when authenticated AND project has a group
+  });
 
-  useEffect(() => {
-    if (projectId) {
-      loadProject(parseInt(projectId));
-    }
-  }, [projectId]);
 
-  const loadProject = async (id: number) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const projectData = await projectsService.getProject(id);
-      setProject(projectData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load project');
-      console.error('Failed to load project:', err);
-    } finally {
-      setLoading(false);
+  const canUserModifyProject = (project: ProjectWithItems) => {
+    if (!user) return false;
+    
+    // Project owner can always modify
+    if (user.id === project.owner_id) {
+      return true;
     }
+    
+    // For group projects, check if user is group owner or co-owner
+    if (project.group_id && group) {
+      // Check if user is group owner
+      if (user.id === group.owner_id) {
+        return true;
+      }
+      
+      // Check if user is a co-owner in the group
+      const userInGroup = group.users.find(groupUser => groupUser.id === user.id);
+      if (userInGroup && userInGroup.role === 'co_owner') {
+        return true;
+      }
+    }
+    
+    return false;
   };
 
   const isProjectOwner = (project: ProjectWithItems) => {
@@ -86,8 +111,8 @@ export function ProjectDetailPage() {
       await projectsService.deleteProject(project.id);
       navigate('/projects'); // Navigate back to projects list after deletion
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete project');
       console.error('Failed to delete project:', err);
+      // Error will be handled by the polling hook's error state
     }
   };
 
@@ -95,10 +120,9 @@ export function ProjectDetailPage() {
     if (!project) return;
     
     try {
-      const updatedProject = await projectsService.removeItemFromProject(project.id, itemId);
-      setProject(updatedProject);
+      await projectsService.removeItemFromProject(project.id, itemId);
+      refreshProject(); // Refresh to get updated data
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to remove item from project');
       console.error('Failed to remove item from project:', err);
     }
   };
@@ -107,14 +131,14 @@ export function ProjectDetailPage() {
     if (!project) return;
     
     try {
-      const updatedProject = await projectsService.updateProjectItemCount(project.id, itemId, newCount);
-      setProject(updatedProject);
+      await projectsService.updateProjectItemCount(project.id, itemId, newCount);
+      refreshProject(); // Refresh to get updated data
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update item count');
       console.error('Failed to update item count:', err);
     }
   };
 
+  // Show loading spinner only during initial load
   if (loading) {
     return (
       <div className="container mx-auto py-8 px-6">
@@ -124,6 +148,7 @@ export function ProjectDetailPage() {
       </div>
     );
   }
+
 
   if (error || !project) {
     return (
@@ -185,7 +210,7 @@ export function ProjectDetailPage() {
             </div>
           </div>
 
-          {isProjectOwner(project) && (
+          {canUserModifyProject(project) && (
             <div className="flex items-center gap-2">
               <Button variant="outline" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
@@ -290,7 +315,7 @@ export function ProjectDetailPage() {
                     <p className="text-muted-foreground mb-4">
                       Add items to this project to start tracking your crafting progress
                     </p>
-                    {isProjectOwner(project) && (
+                    {canUserModifyProject(project) && (
                       <Button onClick={() => navigate('/search/advanced')}>Add Items</Button>
                     )}
                   </div>
@@ -323,7 +348,7 @@ export function ProjectDetailPage() {
                               </p>
                               
                               {/* Count Management Controls */}
-                              {isProjectOwner(project) && (
+                              {canUserModifyProject(project) && (
                                 <div className="flex items-center gap-2 mt-2">
                                   <Button
                                     variant="outline"
@@ -353,7 +378,7 @@ export function ProjectDetailPage() {
                                   {itemProgress}%
                                 </div>
                               </div>
-                              {isProjectOwner(project) && (
+                              {canUserModifyProject(project) && (
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">

@@ -16,27 +16,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Initialize auth state from stored data
   useEffect(() => {
     const initializeAuth = async () => {
+      console.log('🔐 Auth: Starting initialization');
       try {
         const storedUser = authService.getStoredUser();
         const token = authService.getStoredToken();
+        console.log('🔐 Auth: Stored data check', { hasToken: !!token, hasUser: !!storedUser });
 
         if (token && storedUser) {
           // Verify the token is still valid by fetching current user
           try {
+            console.log('🔐 Auth: Verifying token with API...');
             const currentUser = await authService.getCurrentUser();
+            console.log('🔐 Auth: ✅ Token valid, user authenticated', { userEmail: currentUser.email });
             setUser(currentUser);
           } catch (error) {
             // Token is invalid, clear stored auth
-            console.warn('Stored token is invalid:', error);
+            console.warn('🔐 Auth: ❌ Token invalid:', error);
             authService.clearStoredAuth();
             setUser(null);
           }
+        } else {
+          console.log('🔐 Auth: No stored credentials, user not authenticated');
+          setUser(null);
         }
       } catch (error) {
-        console.error('Failed to initialize auth:', error);
+        console.error('🔐 Auth: ❌ Initialization failed:', error);
         authService.clearStoredAuth();
         setUser(null);
       } finally {
+        console.log('🔐 Auth: Initialization complete, loading = false');
         setIsLoading(false);
       }
     };

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { projectsService } from '@/lib/projects-service';
-import { groupsService } from '@/lib/groups-service';
+import { useProjectsPolling, useGroupsPolling } from '@/hooks/use-projects-polling';
+import { POLLING_CONFIG } from '@/lib/polling-config';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,55 +33,57 @@ import { Plus, FolderOpen, Settings, Trash2, Calendar, Crown } from 'lucide-reac
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProtectedRoute } from '@/components/protected-route';
 import type { ProjectWithItems } from '@/types/projects';
-import type { UserGroup } from '@/types/groups';
 
 export function ProjectsPage() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<ProjectWithItems[]>([]);
-  const [groups, setGroups] = useState<UserGroup[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  console.log('📄 ProjectsPage: Render', { 
+    hasUser: !!user, 
+    authLoading, 
+    userEmail: user?.email,
+    pollingEnabled: !!user && !authLoading 
+  });
+
+  // Use polling hooks for automatic updates
+  const { 
+    data: projects, 
+    loading, 
+    error, 
+    refresh: refreshProjects 
+  } = useProjectsPolling({
+    interval: POLLING_CONFIG.PROJECTS_INTERVAL,
+    initialDelay: POLLING_CONFIG.INITIAL_DELAY,
+    enabled: !!user && !authLoading // Only poll when user is authenticated and auth is complete
+  });
+
+  console.log('📄 ProjectsPage: Polling state', { 
+    loading, 
+    hasData: !!projects, 
+    dataLength: Array.isArray(projects) ? projects.length : 'not array',
+    error 
+  });
+  
+  const { 
+    data: groups 
+  } = useGroupsPolling({
+    interval: POLLING_CONFIG.GROUPS_INTERVAL,
+    initialDelay: POLLING_CONFIG.INITIAL_DELAY,
+    enabled: !!user && !authLoading // Only poll when user is authenticated and auth is complete
+  });
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState<string>('personal');
   const [isCreating, setIsCreating] = useState(false);
-
-  // Load projects and groups on component mount
-  useEffect(() => {
-    loadProjects();
-    loadGroups();
-  }, []);
-
-  const loadProjects = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const userProjects = await projectsService.getUserProjects();
-      setProjects(userProjects);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load projects');
-      console.error('Failed to load projects:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadGroups = async () => {
-    try {
-      const userGroups = await groupsService.getUserGroups();
-      setGroups(userGroups);
-    } catch (err) {
-      console.error('Failed to load groups:', err);
-      // Don't show error for groups, as it's not critical
-    }
-  };
+  const [createError, setCreateError] = useState<string | null>(null);
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return;
 
     try {
       setIsCreating(true);
+      setCreateError(null);
       await projectsService.createProject({
         name: newProjectName.trim(),
         group_id: selectedGroupId === 'personal' ? null : parseInt(selectedGroupId),
@@ -88,9 +91,9 @@ export function ProjectsPage() {
       setNewProjectName('');
       setSelectedGroupId('personal');
       setIsCreateDialogOpen(false);
-      await loadProjects(); // Refresh the list
+      refreshProjects(); // Refresh the list immediately
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create project');
+      setCreateError(err instanceof Error ? err.message : 'Failed to create project');
       console.error('Failed to create project:', err);
     } finally {
       setIsCreating(false);
@@ -100,9 +103,9 @@ export function ProjectsPage() {
   const handleDeleteProject = async (projectId: number) => {
     try {
       await projectsService.deleteProject(projectId);
-      await loadProjects(); // Refresh the list
+      refreshProjects(); // Refresh the list immediately
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete project');
+      setCreateError(err instanceof Error ? err.message : 'Failed to delete project');
       console.error('Failed to delete project:', err);
     }
   };
@@ -124,11 +127,13 @@ export function ProjectsPage() {
   };
 
   const getProjectGroup = (project: ProjectWithItems) => {
-    if (!project.group_id) return null;
+    if (!project.group_id || !groups) return null;
     return groups.find(group => group.id === project.group_id);
   };
 
-  if (loading) {
+
+  // Show loading spinner only during initial load when we have no data and no error
+  if (loading && !projects && !error) {
     return (
       <div className="container mx-auto py-8 px-6">
         <div className="flex items-center justify-center h-64">
@@ -137,6 +142,23 @@ export function ProjectsPage() {
       </div>
     );
   }
+
+  // Handle general errors (ProtectedRoute handles auth)
+  if (error && !loading) {
+    return (
+      <div className="container mx-auto py-8 px-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="text-destructive mb-4">Error loading projects: {error}</div>
+            <Button onClick={refreshProjects} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <ProtectedRoute>
@@ -194,8 +216,8 @@ export function ProjectsPage() {
                     <SelectContent>
                       <SelectItem value="personal">Personal Project</SelectItem>
                       {groups
-                        .filter((group) => group.can_create_projects)
-                        .map((group) => (
+                        ?.filter((group) => group.can_create_projects)
+                        ?.map((group) => (
                           <SelectItem key={group.id} value={group.id.toString()}>
                             Group: {group.name}
                           </SelectItem>
@@ -233,7 +255,23 @@ export function ProjectsPage() {
               variant="outline" 
               size="sm" 
               className="mt-2"
-              onClick={() => setError(null)}
+              onClick={refreshProjects}
+            >
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {/* Create Error Display */}
+        {createError && (
+          <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-4 mb-6">
+            <p className="font-medium text-destructive">Create Error</p>
+            <p className="text-sm">{createError}</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-2"
+              onClick={() => setCreateError(null)}
             >
               Dismiss
             </Button>
@@ -241,7 +279,7 @@ export function ProjectsPage() {
         )}
 
         {/* Projects Grid */}
-        {projects.length === 0 ? (
+        {!projects || projects.length === 0 ? (
           <Card className="text-center py-12">
             <CardHeader>
               <div className="flex justify-center mb-4">

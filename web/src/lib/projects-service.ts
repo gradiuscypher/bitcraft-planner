@@ -25,6 +25,11 @@ class ProjectsService {
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
+    // Log redirect information for debugging
+    if (response.redirected) {
+      console.warn(`API request was redirected: ${API_BASE_URL}${endpoint} -> ${response.url}`);
+    }
+
     if (!response.ok) {
       if (response.status === 401) {
         throw new Error('Authentication required');
@@ -32,7 +37,27 @@ class ProjectsService {
       if (response.status === 403) {
         throw new Error('You do not have permission to perform this action');
       }
-      const errorText = await response.text();
+      if (response.status === 307 || response.status === 308) {
+        throw new Error(`Request redirected (${response.status}). Check API endpoint configuration.`);
+      }
+      
+      let errorText = '';
+      try {
+        errorText = await response.text();
+      } catch {
+        errorText = 'Unable to read error response';
+      }
+      
+      const fullUrl = `${API_BASE_URL}${endpoint}`;
+      console.error(`API Error Details:`, {
+        status: response.status,
+        statusText: response.statusText,
+        url: fullUrl,
+        redirected: response.redirected,
+        finalUrl: response.url,
+        errorText
+      });
+      
       throw new Error(`API Error: ${response.status} - ${errorText}`);
     }
 

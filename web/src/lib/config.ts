@@ -19,7 +19,7 @@ export const API_ENDPOINTS = {
   SEARCH_BEST: '/search/best',
   
   // Groups endpoints
-  GROUPS: '/groups',
+  GROUPS: '/groups/',
   GROUPS_BY_ID: (id: number) => `/groups/${id}`,
   GROUPS_ADD_USER: (groupId: number, discordId: string) => `/groups/${groupId}/users/${discordId}`,
   GROUPS_REMOVE_USER: (groupId: number, discordId: string) => `/groups/${groupId}/users/${discordId}`,

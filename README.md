@@ -2,6 +2,8 @@
 Crafting planner for Bitcraft Online
 
 # Working on
+- Page for offering upgrade services, allowing both an individual and a group to cover those upgrade services
+- Some way of tracking a user's skills so that others can know what services they could offer
 - Alerting system for completed crafting stations, character not crafting, etc
 - Clean up TODO
 - Don't enable logger in dev
