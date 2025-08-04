@@ -11,7 +11,6 @@ import {
   Zap,
   Settings,
   MapPin,
-  Users,
   Lightbulb
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
@@ -57,12 +56,6 @@ export function BuildingDetail() {
 
     fetchBuildingDetails()
   }, [buildingId, navigate])
-
-  const formatTime = (hours: number) => {
-    if (hours < 1) return `${Math.round(hours * 60)}m`
-    if (hours >= 24) return `${Math.round(hours / 24)}d`
-    return `${Math.round(hours)}h`
-  }
 
   if (loading) {
     return (
@@ -143,7 +136,7 @@ export function BuildingDetail() {
                   Building Overview
                 </CardTitle>
                 <CardDescription>
-                  {building.description}
+                  {String(building.description || '')}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -156,19 +149,19 @@ export function BuildingDetail() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center gap-2">
                       <Heart className="h-4 w-4 text-red-500" />
-                      <span className="text-sm text-foreground">Health: {building.max_health}</span>
+                      <span className="text-sm text-foreground">Health: {String(building.max_health || 0)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Shield className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm text-foreground">Defense: {building.defense_level}</span>
+                      <span className="text-sm text-foreground">Defense: {String(building.defense_level || 0)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-yellow-500" />
-                      <span className="text-sm text-foreground">Decay: {building.decay}/day</span>
+                      <span className="text-sm text-foreground">Decay: {String(building.decay || 0)}/day</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <Lightbulb className="h-4 w-4 text-orange-500" />
-                      <span className="text-sm text-foreground">Light Radius: {building.light_radius}</span>
+                      <span className="text-sm text-foreground">Light Radius: {String(building.light_radius || 0)}</span>
                     </div>
                   </div>
                 </div>
@@ -210,7 +203,7 @@ export function BuildingDetail() {
                 </div>
 
                 {/* Functions */}
-                {building.functions && building.functions.length > 0 && (
+                {Boolean(building.functions) && Array.isArray(building.functions) && building.functions.length > 0 && (
                   <>
                     <Separator />
                     <div>
@@ -219,7 +212,7 @@ export function BuildingDetail() {
                         Building Functions
                       </h3>
                       <div className="text-sm text-muted-foreground">
-                        This building has {building.functions.length} function(s) available.
+                        This building has {Array.isArray(building.functions) ? building.functions.length : 0} function(s) available.
                       </div>
                     </div>
                   </>
@@ -286,11 +279,11 @@ export function BuildingDetail() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Health:</span>
-                    <span className="font-medium text-foreground">{building.max_health}</span>
+                    <span className="font-medium text-foreground">{String(building.max_health || 0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Defense:</span>
-                    <span className="font-medium text-foreground">{building.defense_level}</span>
+                    <span className="font-medium text-foreground">{String(building.defense_level || 0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">In Compendium:</span>
