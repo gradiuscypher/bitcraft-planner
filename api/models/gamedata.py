@@ -3,7 +3,7 @@ from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, Text, select
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
 
-from database import AsyncSession, Base, SessionLocal, init_database
+from database import AsyncSession, Base, SessionLocal, init_database, reset_database
 
 
 class GameItemOrm(Base):
@@ -721,6 +721,8 @@ async def create_fts_tables() -> None:
 
 
 async def build_everything() -> None:
+    print("Reset the DB")
+    await reset_database()
     print("Initializing database...")
     await init_database()
     print("Initializing game data...")
