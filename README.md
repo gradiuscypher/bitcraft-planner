@@ -3,9 +3,10 @@ Crafting planner for Bitcraft Online
 
 # Feedback
 - Buildings are not loading?
-- Build projects from a single product, break down items into their base requirements, eg: 25x T5 Codex Items, breaking down gear requirements for upgrades
-  - Break down the requirements by tier
 - Update item counts by setting a specific number, not just plus and minus
+- show the item's tier wherever an item name is listed, eg: in the search results
+- organize the project list by item tiers, maybe other sorts as well? option to hide completed items?
+- highlight items that are crafted vs gathered in the project list?
 
 # Working on
 - Clean up TODO
