@@ -70,15 +70,46 @@ export interface Recipe {
   tool_type_requirement: number | null
 }
 
+export interface RecipeTreeItem {
+  item_id: number
+  item_name: string
+  amount: number
+  is_base_material?: boolean
+}
+
+export interface RecipeTreeStep {
+  depth: number
+  items: RecipeTreeItem[]
+}
+
+export interface RecipeTreeResponse {
+  recipe_id: number
+  item_id: number
+  item_name: string
+  steps: RecipeTreeStep[]
+  base_materials: RecipeTreeItem[]
+}
+
 class ApiService {
-  private async makeRequest<T>(endpoint: string): Promise<T> {
+  private async makeRequest<T>(endpoint: string, timeout: number = 60000): Promise<T> {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), timeout)
+      
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        signal: controller.signal
+      })
+      
+      clearTimeout(timeoutId)
+      
       if (!response.ok) {
         throw new Error(`API request failed: ${response.status}`)
       }
       return await response.json()
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timed out - this operation may take a while due to complex recipe calculations')
+      }
       console.error('API request error:', error)
       throw error
     }
@@ -103,6 +134,14 @@ class ApiService {
 
   async getBuildingType(buildingTypeId: number): Promise<BuildingType> {
     return this.makeRequest<BuildingType>(`/buildings/type/${buildingTypeId}`)
+  }
+
+  async getItemRecipeTree(itemId: number, amount: number = 1): Promise<RecipeTreeResponse> {
+    const params = new URLSearchParams({
+      amount: amount.toString()
+    })
+    // Use a longer timeout for recipe tree calculations (2 minutes)
+    return this.makeRequest<RecipeTreeResponse>(`/items/${itemId}/recipe-tree?${params}`, 120000)
   }
 
   // Search methods

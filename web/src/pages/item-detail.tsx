@@ -20,6 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { AddToProject } from "@/components/add-to-project"
+import { RecipeTreeFlow } from "@/components/recipe-tree-flow"
 import { apiService, type ItemDetail, type BuildingDetail, type CargoDetail, type Recipe } from '@/lib/api'
 
 type ItemDetailData = ItemDetail | BuildingDetail | CargoDetail
@@ -442,6 +443,22 @@ export function ItemDetail() {
                   </>
                 )}
 
+                {/* Recipe Tree Flow - only for items */}
+                {type === 'item' && itemId && (
+                  <>
+                    <Separator />
+                    <div>
+                      <RecipeTreeFlow 
+                        itemId={parseInt(itemId, 10)}
+                        itemName={item.name}
+                        onAddToProject={() => {
+                          // Refresh the page or show a success message
+                          console.log('Base materials added to project')
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
 
               </CardContent>
             </Card>

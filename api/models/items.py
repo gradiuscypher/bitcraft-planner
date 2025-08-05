@@ -1,6 +1,6 @@
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ConsumedItem(BaseModel):
@@ -45,8 +45,8 @@ class LevelRequirement(BaseModel):
 
 
 class BuildingType(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: int
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    id: int = Field(alias='building_id')
     name: str
     category: int
 
@@ -109,8 +109,8 @@ class Item(BaseModel):
         'compendium_entry': True,
         'item_list_id': 0}
     """
-    model_config = ConfigDict(from_attributes=True)
-    id: int
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    id: int = Field(alias='item_id')
     name: str
     description: str
     volume: int
@@ -253,7 +253,8 @@ class Cargo(BaseModel):
         'rarity': [1, {}],
         'not_pickupable': False}
     """
-    id: int
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    id: int = Field(alias='cargo_id')
     name: str
     description: str
     volume: int

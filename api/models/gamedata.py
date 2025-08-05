@@ -505,6 +505,9 @@ async def init_game_data() -> None:
     _, building_recipes = load_building_recipes()
     # building_descriptions = load_building_descriptions()
     building_types = load_building_types()
+    do_not_include_tags = [
+        "Journal Page",
+    ]
 
     # fill out the item data
     async with SessionLocal() as db:
@@ -558,11 +561,20 @@ async def init_game_data() -> None:
 
                     consumed_items = recipe.get("consumed_item_stacks", [])
                     for consumed_item in consumed_items:
-                        consumed_item_orm = GameItemRecipeConsumedOrm(
-                            item_id=consumed_item[0],
-                            amount=consumed_item[1],
-                        )
-                        recipe_orm.consumed_items.append(consumed_item_orm)
+                        c_item_id = consumed_item[0]
+                        c_item_amount = consumed_item[1]
+                        try:
+                            c_item_tag = item_by_id[c_item_id]["tag"]
+                        except KeyError:
+                            continue
+
+                        if c_item_tag not in do_not_include_tags:
+                            consumed_item_orm = GameItemRecipeConsumedOrm(
+                                item_id=c_item_id,
+                                amount=c_item_amount,
+                            )
+                            recipe_orm.consumed_items.append(consumed_item_orm)
+
                     produced_items = recipe.get("crafted_item_stacks", [])
                     for produced_item in produced_items:
                         produced_item_orm = GameItemRecipeProducedOrm(

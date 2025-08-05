@@ -320,69 +320,40 @@ export function ProjectDetailPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                     {project.items.map((item) => {
                       const itemProgress = item.target_count > 0 ? Math.round((item.count / item.target_count) * 100) : 0;
                       const isCompleted = item.count >= item.target_count;
                       
                       return (
-                        <div key={item.id} className="border rounded-lg p-4 space-y-3">
+                        <div key={item.id} className="border rounded-lg p-3 space-y-2">
                           <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-semibold text-lg">{item.name}</h4>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1 mb-1">
+                                <h4 className="font-semibold text-sm truncate">{item.name}</h4>
                                 {isCompleted ? (
-                                  <Badge variant="default" className="bg-green-500">
-                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                    Complete
+                                  <Badge variant="default" className="bg-green-500 text-xs px-1 py-0 h-5">
+                                    <CheckCircle className="h-2.5 w-2.5" />
                                   </Badge>
                                 ) : (
-                                  <Badge variant="secondary">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    In Progress
+                                  <Badge variant="secondary" className="text-xs px-1 py-0 h-5">
+                                    <Clock className="h-2.5 w-2.5" />
                                   </Badge>
                                 )}
                               </div>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {item.count} of {item.target_count} crafted
+                              <p className="text-xs text-muted-foreground">
+                                {item.count} / {item.target_count}
                               </p>
-                              
-                              {/* Count Management Controls */}
-                              {canUserModifyProject(project) && (
-                                <div className="flex items-center gap-2 mt-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleUpdateItemCount(item.item_id, Math.max(0, item.count - 1))}
-                                    disabled={item.count <= 0}
-                                  >
-                                    <Minus className="h-3 w-3" />
-                                  </Button>
-                                  <span className="text-sm font-medium min-w-[3ch] text-center">
-                                    {item.count}
-                                  </span>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleUpdateItemCount(item.item_id, Math.min(item.target_count, item.count + 1))}
-                                    disabled={item.count >= item.target_count}
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              )}
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div className="text-right">
-                                <div className="text-sm font-medium">
-                                  {itemProgress}%
-                                </div>
+                            <div className="flex items-center gap-1 ml-2">
+                              <div className="text-xs font-medium text-muted-foreground">
+                                {itemProgress}%
                               </div>
                               {canUserModifyProject(project) && (
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                                      <Trash2 className="h-4 w-4" />
+                                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-6 w-6 p-0">
+                                      <Trash2 className="h-3 w-3" />
                                     </Button>
                                   </AlertDialogTrigger>
                                   <AlertDialogContent>
@@ -407,13 +378,39 @@ export function ProjectDetailPage() {
                             </div>
                           </div>
                           
-                          <div className="space-y-2">
-                            <Progress value={itemProgress} className="h-1.5" />
-                            <div className="flex justify-between text-xs text-muted-foreground">
-                              <span>Progress</span>
-                              <span>{item.target_count - item.count} remaining</span>
+                          <Progress value={itemProgress} className="h-1" />
+                          
+                          {/* Count Management Controls */}
+                          {canUserModifyProject(project) && (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleUpdateItemCount(item.item_id, Math.max(0, item.count - 1))}
+                                  disabled={item.count <= 0}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <Minus className="h-2.5 w-2.5" />
+                                </Button>
+                                <span className="text-xs font-medium min-w-[2ch] text-center">
+                                  {item.count}
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleUpdateItemCount(item.item_id, Math.min(item.target_count, item.count + 1))}
+                                  disabled={item.count >= item.target_count}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <Plus className="h-2.5 w-2.5" />
+                                </Button>
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {item.target_count - item.count} left
+                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
                       );
                     })}
