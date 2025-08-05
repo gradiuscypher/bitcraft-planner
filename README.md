@@ -10,7 +10,7 @@ Crafting planner for Bitcraft Online
 # Working on
 - Clean up TODO
 - Do not show item results that don't have recipes
-- When creating item recipes, separate refining from crafting via the description string?
+- Figure out a better way to deal with the recipes that can use mutliple rarities of items
 - When someone adds an item from a project page, it should remember what project was selected and use that as the default
 - Page for offering upgrade services, allowing both an individual and a group to cover those upgrade services
 - Some way of tracking a user's skills so that others can know what services they could offer

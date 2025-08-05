@@ -62,6 +62,11 @@ export function ItemDetail() {
     const fetchItemDetails = async () => {
       setLoading(true)
       setError(null)
+      
+      // Clear previous recipe data when navigating to a new item
+      setRecipes([])
+      setConsumedItemsWithNames([])
+      setBuildingTypeNames({})
 
       try {
         const numericId = parseInt(itemId, 10)
