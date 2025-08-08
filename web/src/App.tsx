@@ -16,7 +16,29 @@ import {
 } from 'lucide-react'
 import { SearchDropdown } from '@/components/search-dropdown'
 import { UserNav } from '@/components/user-nav'
-import { AuthProvider } from '@/hooks/use-auth'
+import { AuthProvider, useAuth } from '@/hooks/use-auth'
+// Auth-aware nav links
+function AuthNavLinks() {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return null;
+  return (
+    <>
+      <Button variant="ghost" size="sm" asChild>
+        <Link to="/projects">
+          <FolderOpen className="h-4 w-4 mr-2" />
+          Projects
+        </Link>
+      </Button>
+      <Button variant="ghost" size="sm" asChild>
+        <Link to="/groups">
+          <Users className="h-4 w-4 mr-2" />
+          Groups
+        </Link>
+      </Button>
+    </>
+  );
+}
+
 import { SearchResults } from '@/pages/search-results'
 import { AdvancedSearch } from '@/pages/advanced-search'
 import { ItemDetail } from '@/pages/item-detail'
@@ -28,6 +50,7 @@ import { GroupsPage } from '@/pages/groups'
 import { GroupDetailPage } from '@/pages/group-detail'
 import { ProjectsPage } from '@/pages/projects'
 import { ProjectDetailPage } from '@/pages/project-detail'
+import { ProtectedRoute } from '@/components/protected-route'
 
 
 // Landing page component
@@ -177,18 +200,7 @@ function App() {
                         Advanced Search
                       </Link>
                     </Button>
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link to="/projects">
-                        <FolderOpen className="h-4 w-4 mr-2" />
-                        Projects
-                      </Link>
-                    </Button>
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link to="/groups">
-                        <Users className="h-4 w-4 mr-2" />
-                        Groups
-                      </Link>
-                    </Button>
+                    <AuthNavLinks />
                   </div>
                 </div>
 
@@ -217,10 +229,10 @@ function App() {
               <Route path="/cargo/:cargoId" element={<CargoDetail />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/projects" element={<ProjectsPage />} />
-              <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-              <Route path="/groups" element={<GroupsPage />} />
-              <Route path="/groups/:groupId" element={<GroupDetailPage />} />
+              <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+              <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
+              <Route path="/groups" element={<ProtectedRoute><GroupsPage /></ProtectedRoute>} />
+              <Route path="/groups/:groupId" element={<ProtectedRoute><GroupDetailPage /></ProtectedRoute>} />
             </Routes>
           </div>
         </Router>

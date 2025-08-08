@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { projectsService } from '@/lib/projects-service';
 import { useProjectsPolling, useGroupsPolling } from '@/hooks/use-projects-polling';
@@ -37,6 +37,10 @@ import type { ProjectWithItems } from '@/types/projects';
 export function ProjectsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+  // If auth has resolved and there's no user, redirect immediately
+  if (!authLoading && !user) {
+    return <Navigate to="/login" replace />;
+  }
 
   // Use polling hooks for automatic updates
   const { 

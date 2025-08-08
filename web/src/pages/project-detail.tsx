@@ -1,9 +1,11 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { projectsService } from '@/lib/projects-service';
 import { useProjectPolling, useGroupPolling } from '@/hooks/use-projects-polling';
 import { POLLING_CONFIG } from '@/lib/polling-config';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -39,6 +41,8 @@ export function ProjectDetailPage() {
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
   const projectIdNum = projectId ? parseInt(projectId) : null;
+  const [pendingCounts, setPendingCounts] = useState<Record<number, number>>({});
+  const [isSavingCounts, setIsSavingCounts] = useState(false);
   
   // Use polling hooks for automatic updates
   const { 
@@ -86,6 +90,42 @@ export function ProjectDetailPage() {
     return false;
   };
 
+  const hasPendingChanges = useMemo(() => Object.keys(pendingCounts).length > 0, [pendingCounts]);
+
+  const getCurrentCount = (itemId: number, fallback: number) => {
+    return pendingCounts[itemId] ?? fallback;
+  };
+
+  const setPendingCount = (itemId: number, nextCount: number, originalCount: number) => {
+    const clamped = Math.max(0, nextCount);
+    setPendingCounts((prev) => {
+      // If value equals original, remove from pending
+      if (clamped === originalCount) {
+        const { [itemId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [itemId]: clamped };
+    });
+  };
+
+  const handleSaveAllCounts = async () => {
+    if (!project || !hasPendingChanges) return;
+    try {
+      setIsSavingCounts(true);
+      const updates = Object.entries(pendingCounts).map(([itemIdStr, newCount]) => {
+        const itemId = Number(itemIdStr);
+        return projectsService.updateProjectItemCount(project.id, itemId, newCount);
+      });
+      await Promise.all(updates);
+      setPendingCounts({});
+      await refreshProject();
+    } catch (err) {
+      console.error('Failed to save count changes:', err);
+    } finally {
+      setIsSavingCounts(false);
+    }
+  };
+
   const isProjectOwner = (project: ProjectWithItems) => {
     return user?.id === project.owner_id;
   };
@@ -127,16 +167,7 @@ export function ProjectDetailPage() {
     }
   };
 
-  const handleUpdateItemCount = async (itemId: number, newCount: number) => {
-    if (!project) return;
-    
-    try {
-      await projectsService.updateProjectItemCount(project.id, itemId, newCount);
-      refreshProject(); // Refresh to get updated data
-    } catch (err) {
-      console.error('Failed to update item count:', err);
-    }
-  };
+  // Replaced by batched save: handleSaveAllCounts
 
   // Show loading spinner only during initial load
   if (loading) {
@@ -216,6 +247,15 @@ export function ProjectDetailPage() {
                 <Settings className="h-4 w-4" />
                 Project Settings
               </Button>
+              {hasPendingChanges && (
+                <Button 
+                  onClick={handleSaveAllCounts}
+                  disabled={isSavingCounts}
+                  className="flex items-center gap-2"
+                >
+                  {isSavingCounts ? 'Saving…' : 'Save Changes'}
+                </Button>
+              )}
               
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -342,7 +382,7 @@ export function ProjectDetailPage() {
                                 )}
                               </div>
                               <p className="text-xs text-muted-foreground">
-                                {item.count} / {item.target_count}
+                                {getCurrentCount(item.item_id, item.count)} / {item.target_count}
                               </p>
                             </div>
                             <div className="flex items-center gap-1 ml-2">
@@ -383,32 +423,57 @@ export function ProjectDetailPage() {
                           {/* Count Management Controls */}
                           {canUserModifyProject(project) && (
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleUpdateItemCount(item.item_id, Math.max(0, item.count - 1))}
-                                  disabled={item.count <= 0}
-                                  className="h-6 w-6 p-0"
-                                >
-                                  <Minus className="h-2.5 w-2.5" />
-                                </Button>
-                                <span className="text-xs font-medium min-w-[2ch] text-center">
-                                  {item.count}
-                                </span>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleUpdateItemCount(item.item_id, Math.min(item.target_count, item.count + 1))}
-                                  disabled={item.count >= item.target_count}
-                                  className="h-6 w-6 p-0"
-                                >
-                                  <Plus className="h-2.5 w-2.5" />
-                                </Button>
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {item.target_count - item.count} left
-                              </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const current = getCurrentCount(item.item_id, item.count);
+                                setPendingCount(item.item_id, Math.max(0, current - 1), item.count);
+                              }}
+                              disabled={getCurrentCount(item.item_id, item.count) <= 0}
+                              className="h-6 w-6 p-0"
+                            >
+                              <Minus className="h-2.5 w-2.5" />
+                            </Button>
+                            <Input
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              max={item.target_count}
+                              value={getCurrentCount(item.item_id, item.count)}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const parsed = Number(val);
+                                if (Number.isNaN(parsed)) {
+                                  setPendingCount(item.item_id, 0, item.count);
+                                } else {
+                                  const clamped = Math.min(Math.max(0, parsed), item.target_count);
+                                  setPendingCount(item.item_id, clamped, item.count);
+                                }
+                              }}
+                              className="h-6 w-16 px-2 text-center text-xs"
+                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const current = getCurrentCount(item.item_id, item.count);
+                                setPendingCount(
+                                  item.item_id,
+                                  Math.min(item.target_count, current + 1),
+                                  item.count
+                                );
+                              }}
+                              disabled={getCurrentCount(item.item_id, item.count) >= item.target_count}
+                              className="h-6 w-6 p-0"
+                            >
+                              <Plus className="h-2.5 w-2.5" />
+                            </Button>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {item.target_count - getCurrentCount(item.item_id, item.count)} left
+                          </div>
                             </div>
                           )}
                         </div>
