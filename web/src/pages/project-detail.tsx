@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { projectsService } from '@/lib/projects-service';
 import { useProjectPolling, useGroupPolling } from '@/hooks/use-projects-polling';
@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import {
+import { TierTag } from '@/components/tier-tag';
+import { 
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -31,10 +32,12 @@ import {
   Users,
   Trash2,
   Plus,
-  Minus
+  Minus,
+  Filter,
+  ChevronDown
 } from 'lucide-react';
 import { ProtectedRoute } from '@/components/protected-route';
-import type { ProjectWithItems } from '@/types/projects';
+import type { ProjectWithItems, ProjectItem } from '@/types/projects';
 
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -43,6 +46,8 @@ export function ProjectDetailPage() {
   const projectIdNum = projectId ? parseInt(projectId) : null;
   const [pendingCounts, setPendingCounts] = useState<Record<number, number>>({});
   const [isSavingCounts, setIsSavingCounts] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   
   // Use polling hooks for automatic updates
   const { 
@@ -91,6 +96,90 @@ export function ProjectDetailPage() {
   };
 
   const hasPendingChanges = useMemo(() => Object.keys(pendingCounts).length > 0, [pendingCounts]);
+  const groupedByTier = useMemo(() => {
+    const groups: Record<string, ProjectItem[]> = {};
+    const items = project && project.items ? project.items : [];
+    for (const item of items) {
+      const key = typeof item.tier === 'number' && item.tier > 0 ? `T${item.tier}` : 'Unknown';
+      if (!groups[key]) groups[key] = [] as ProjectItem[];
+      groups[key].push(item);
+    }
+    // sort items within a tier by name
+    Object.values(groups).forEach(arr => arr.sort((a, b) => a.name.localeCompare(b.name)));
+    return groups;
+  }, [project?.items, project]);
+
+  const tierSections = useMemo(() => {
+    const sections: { key: string; label: string; tier: number | null }[] = [];
+    for (let t = 1; t <= 7; t++) {
+      const key = `T${t}`;
+      if (groupedByTier[key]?.length) sections.push({ key, label: `Tier ${t}`, tier: t });
+    }
+    if (groupedByTier['Unknown']?.length) sections.push({ key: 'Unknown', label: 'Unknown Tier', tier: null });
+    return sections;
+  }, [groupedByTier]);
+
+  const toggleSection = (key: string) => {
+    setOpenSections(prev => ({ ...prev, [key]: !(prev[key] ?? true) }));
+  };
+
+  const getTierHeaderClasses = (tier?: number | null) => {
+    switch (tier) {
+      case 1:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100';
+      case 2:
+        return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100';
+      case 3:
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100';
+      case 4:
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100';
+      case 5:
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100';
+      case 6:
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100';
+      case 7:
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100';
+      default:
+        return 'bg-muted text-foreground';
+    }
+  };
+
+  // Persist and restore UI preferences per project
+  useEffect(() => {
+    if (!projectId) return;
+    const prefix = `project:${projectId}`;
+    try {
+      const hide = localStorage.getItem(`${prefix}:hideCompleted`);
+      if (hide !== null) setHideCompleted(hide === '1' || hide === 'true');
+      const open = localStorage.getItem(`${prefix}:openSections`);
+      if (open) {
+        const parsed = JSON.parse(open) as Record<string, boolean>;
+        if (parsed && typeof parsed === 'object') {
+          setOpenSections(parsed);
+        }
+      }
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    const prefix = `project:${projectId}`;
+    try {
+      localStorage.setItem(`${prefix}:hideCompleted`, hideCompleted ? '1' : '0');
+    } catch {}
+  }, [projectId, hideCompleted]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    const prefix = `project:${projectId}`;
+    try {
+      localStorage.setItem(`${prefix}:openSections`, JSON.stringify(openSections));
+    } catch {}
+  }, [projectId, openSections]);
+
 
   const getCurrentCount = (itemId: number, fallback: number) => {
     return pendingCounts[itemId] ?? fallback;
@@ -337,13 +426,28 @@ export function ProjectDetailPage() {
           <div className="lg:col-span-3">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5" />
-                  Project Items ({project.items?.length || 0})
-                </CardTitle>
-                <CardDescription>
-                  Items to craft for this project
-                </CardDescription>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      Project Items ({project.items?.length || 0})
+                    </CardTitle>
+                    <CardDescription>
+                      Items to craft for this project
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={hideCompleted ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setHideCompleted(v => !v)}
+                      className="flex items-center gap-2"
+                    >
+                      <Filter className="h-4 w-4" />
+                      {hideCompleted ? 'Showing Incomplete' : 'Hide Completed'}
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {!project.items || project.items.length === 0 ? (
@@ -360,17 +464,41 @@ export function ProjectDetailPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                    {project.items.map((item) => {
+                  <div className="space-y-3">
+                    {tierSections.map(({ key, label, tier }) => {
+                      const itemsInTier = groupedByTier[key] || [];
+                      const visibleItems = itemsInTier.filter((item) => !hideCompleted || item.count < item.target_count);
+                      if (visibleItems.length === 0) return null;
+                      const isOpen = openSections[key] ?? true;
+                      return (
+                        <div key={key} className="border rounded-lg">
+                          <button
+                            type="button"
+                            className={`w-full flex items-center justify-between px-3 py-2 ${getTierHeaderClasses(typeof tier === 'number' ? tier : null)} transition-colors`}
+                            onClick={() => toggleSection(key)}
+                          >
+                            <div className="flex items-center gap-2">
+                              <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? '' : '-rotate-90'}`} />
+                              <span className="font-medium text-sm text-foreground">{label}</span>
+                              <Badge variant="secondary" className="text-xs">{visibleItems.length}</Badge>
+                            </div>
+                          </button>
+                          {isOpen && (
+                            <div className="p-3">
+                              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                {visibleItems.map((item) => {
                       const itemProgress = item.target_count > 0 ? Math.round((item.count / item.target_count) * 100) : 0;
                       const isCompleted = item.count >= item.target_count;
                       
                       return (
-                        <div key={item.id} className="border rounded-lg p-3 space-y-2">
+                        <div key={item.id} className={`border rounded-lg p-3 space-y-2`}>
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1 mb-1">
-                                <h4 className="font-semibold text-sm truncate">{item.name}</h4>
+                                <h4 className="font-semibold text-sm truncate flex items-center gap-2">
+                                  <span className="truncate">{item.name}</span>
+                                  <TierTag tier={item.tier ?? null} />
+                                </h4>
                                 {isCompleted ? (
                                   <Badge variant="default" className="bg-green-500 text-xs px-1 py-0 h-5">
                                     <CheckCircle className="h-2.5 w-2.5" />
@@ -474,6 +602,12 @@ export function ProjectDetailPage() {
                           <div className="text-xs text-muted-foreground">
                             {item.target_count - getCurrentCount(item.item_id, item.count)} left
                           </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                                })}
+                              </div>
                             </div>
                           )}
                         </div>

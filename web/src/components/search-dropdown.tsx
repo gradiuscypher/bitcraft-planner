@@ -3,6 +3,7 @@ import { Search, Package, Building, Truck } from 'lucide-react'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { apiService, type SearchResult, type SearchAllResponse } from '@/lib/api'
+import { TierTag } from '@/components/tier-tag'
 import { useNavigate } from 'react-router-dom'
 
 interface SearchDropdownProps {
@@ -173,7 +174,10 @@ export function SearchDropdown({ onSearch, onSelectItem }: SearchDropdownProps) 
                 {getItemIcon(item.type)}
               </div>
               <div className="flex-1">
-                <div className="text-sm font-medium">{item.name}</div>
+                <div className="text-sm font-medium flex items-center gap-2">
+                  <span>{item.name}</span>
+                  <TierTag tier={item.tier ?? null} />
+                </div>
                 <div className="text-xs text-muted-foreground">
                   {item.type} • {Math.round(item.score)}% match
                 </div>

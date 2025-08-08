@@ -6,6 +6,7 @@ export interface SearchResult {
   score: number
   id: number  // Changed from string to number
   type: string | null
+  tier?: number | null
 }
 
 export interface SearchResponse {
@@ -24,6 +25,7 @@ export interface SearchAllResponse {
 export interface ItemDetail {
   id: number
   name: string
+  tier?: number
   [key: string]: unknown // Allow for additional properties from the API
 }
 
@@ -36,6 +38,7 @@ export interface BuildingDetail {
 export interface CargoDetail {
   id: number
   name: string
+  tier?: number
   [key: string]: unknown // Allow for additional properties from the API
 }
 

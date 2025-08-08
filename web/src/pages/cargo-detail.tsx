@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { AddToProject } from "@/components/add-to-project"
+import { TierTag } from "@/components/tier-tag"
 import { apiService, type CargoDetail } from '@/lib/api'
 
 export function CargoDetail() {
@@ -70,22 +71,7 @@ export function CargoDetail() {
     return `${Math.round(seconds / 60)}m`
   }
 
-  const getTierColor = (tier: number) => {
-    switch (tier) {
-      case 1:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-      case 2:
-        return 'bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-200'
-      case 3:
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200'
-      case 4:
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-800 dark:text-purple-200'
-      case 5:
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-200'
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200'
-    }
-  }
+  // TierTag used for tier badging
 
   if (loading) {
     return (
@@ -147,9 +133,7 @@ export function CargoDetail() {
                 <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
                   cargo
                 </Badge>
-                <Badge variant="outline" className={getTierColor(Number(cargo.tier) || 1)}>
-                  Tier {String(cargo.tier || 1)}
-                </Badge>
+                <TierTag tier={Number(cargo.tier) || 1} />
                 <span className="text-sm text-muted-foreground">
                   ID: {cargo.id}
                 </span>
@@ -310,9 +294,7 @@ export function CargoDetail() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Tier:</span>
-                    <Badge variant="outline" className={getTierColor(Number(cargo.tier) || 1)}>
-                      {String(cargo.tier || 1)}
-                    </Badge>
+                    <TierTag tier={Number(cargo.tier) || 1} />
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Pickupable:</span>

@@ -74,7 +74,7 @@ async def get_project(project_id: int, current_user: Annotated[UserOrm, Depends(
         select(ProjectOrm)
         .where(ProjectOrm.id == project_id)
         .options(
-            selectinload(ProjectOrm.items),
+            selectinload(ProjectOrm.items).selectinload(ProjectItemOrm.item),
             selectinload(ProjectOrm.group).selectinload(UserGroupOrm.user_memberships),
         ),
     )
@@ -143,7 +143,7 @@ async def update_project(project_id: int, project: CreateProjectRequest, current
     result = await db.execute(
         select(ProjectOrm)
         .where(ProjectOrm.id == project_id)
-        .options(selectinload(ProjectOrm.items)),
+        .options(selectinload(ProjectOrm.items).selectinload(ProjectItemOrm.item)),
     )
     updated_project = result.scalar_one()
     return Project.model_validate(updated_project)
@@ -220,7 +220,7 @@ async def add_item_to_project(project_id: int, item: AddItemToProjectRequest, cu
     result = await db.execute(
         select(ProjectOrm)
         .where(ProjectOrm.id == project_id)
-        .options(selectinload(ProjectOrm.items)),
+        .options(selectinload(ProjectOrm.items).selectinload(ProjectItemOrm.item)),
     )
     updated_project = result.scalar_one()
     return Project.model_validate(updated_project)
@@ -245,7 +245,7 @@ async def remove_item_from_project(project_id: int, item_id: int, current_user: 
     result = await db.execute(
         select(ProjectOrm)
         .where(ProjectOrm.id == project_id)
-        .options(selectinload(ProjectOrm.items)),
+        .options(selectinload(ProjectOrm.items).selectinload(ProjectItemOrm.item)),
     )
     updated_project = result.scalar_one()
     return Project.model_validate(updated_project)

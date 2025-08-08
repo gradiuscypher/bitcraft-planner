@@ -186,11 +186,12 @@ class GameBuildingRecipeOrm(Base):
 
 
 class SearchResult:
-    def __init__(self, name: str, score: float, id: int, type: str) -> None:
+    def __init__(self, name: str, score: float, id: int, type: str, tier: int | None = None) -> None:
         self.name = name
         self.score = score
         self.id = id
         self.type = type
+        self.tier = tier
 
 
 class SearchService:
@@ -206,7 +207,7 @@ class SearchService:
         try:
             # First, try exact/prefix matches using SQLite FTS5
             fts_query = """
-            SELECT game_items.id, game_items.name, game_items.item_id,
+            SELECT game_items.id, game_items.name, game_items.item_id, game_items.tier,
                    bm25(items_fts) as rank_score
             FROM game_items
             LEFT JOIN items_fts ON game_items.id = items_fts.rowid
@@ -224,7 +225,7 @@ class SearchService:
         except (OperationalError, ProgrammingError):
             # FTS table doesn't exist or there's an issue, fall back to regular search
             simple_query = """
-            SELECT id, name, item_id, 100.0 as rank_score
+            SELECT id, name, item_id, tier, 100.0 as rank_score
             FROM game_items
             WHERE name LIKE :like_query
             ORDER BY name
@@ -240,11 +241,11 @@ class SearchService:
         if len(fts_results) < limit:
             # Get all items for fuzzy matching
             all_items_result = await self.db.execute(
-                text("SELECT id, name, item_id FROM game_items"),
+                text("SELECT id, name, item_id, tier FROM game_items"),
             )
             all_items = all_items_result.fetchall()
 
-            item_names = {item.name: (item.id, item.item_id) for item in all_items}
+            item_names = {item.name: (item.id, item.item_id, item.tier) for item in all_items}
             fuzzy_results = process.extract(
                 query,
                 item_names.keys(),
@@ -268,18 +269,20 @@ class SearchService:
                         score=normalized_score,
                         id=row.item_id,
                         type="item",
+                        tier=row.tier,
                     ))
                     seen_ids.add(row.id)
 
             # Add fuzzy results
             for name, score, _ in fuzzy_results:
-                item_id, db_item_id = item_names[name]
+                item_id, db_item_id, item_tier = item_names[name]
                 if item_id not in seen_ids:
                     combined_results.append(SearchResult(
                         name=name,
                         score=score,
                         id=db_item_id,
                         type="item",
+                        tier=item_tier,
                     ))
                     seen_ids.add(item_id)
 
@@ -292,6 +295,7 @@ class SearchService:
                 score=row.rank_score or 100.0,
                 id=row.item_id,
                 type="item",
+                tier=getattr(row, "tier", None),
             )
             for row in fts_results[:limit]
         ]
@@ -365,6 +369,7 @@ class SearchService:
                         score=normalized_score,
                         id=row.building_id,
                         type="building",
+                        tier=None,
                     ))
                     seen_ids.add(row.id)
 
@@ -377,6 +382,7 @@ class SearchService:
                         score=score,
                         id=db_building_id,
                         type="building",
+                        tier=None,
                     ))
                     seen_ids.add(building_id)
 
@@ -389,6 +395,7 @@ class SearchService:
                 score=row.rank_score or 100.0,
                 id=row.building_id,
                 type="building",
+                tier=None,
             )
             for row in fts_results[:limit]
         ]
@@ -401,7 +408,7 @@ class SearchService:
         try:
             # First, try exact/prefix matches using SQLite FTS5
             fts_query = """
-            SELECT game_cargos.id, game_cargos.name, game_cargos.cargo_id,
+            SELECT game_cargos.id, game_cargos.name, game_cargos.cargo_id, game_cargos.tier,
                    bm25(cargo_fts) as rank_score
             FROM game_cargos
             LEFT JOIN cargo_fts ON game_cargos.id = cargo_fts.rowid
@@ -419,7 +426,7 @@ class SearchService:
         except (OperationalError, ProgrammingError):
             # FTS table doesn't exist or there's an issue, fall back to regular search
             simple_query = """
-            SELECT id, name, cargo_id, 100.0 as rank_score
+            SELECT id, name, cargo_id, tier, 100.0 as rank_score
             FROM game_cargos
             WHERE name LIKE :like_query
             ORDER BY name
@@ -435,11 +442,11 @@ class SearchService:
         if len(fts_results) < limit:
             # Get all cargo for fuzzy matching
             all_cargo_result = await self.db.execute(
-                text("SELECT id, name, cargo_id FROM game_cargos"),
+                text("SELECT id, name, cargo_id, tier FROM game_cargos"),
             )
             all_cargo = all_cargo_result.fetchall()
 
-            cargo_names = {cargo.name: (cargo.id, cargo.cargo_id) for cargo in all_cargo}
+            cargo_names = {cargo.name: (cargo.id, cargo.cargo_id, cargo.tier) for cargo in all_cargo}
             fuzzy_results = process.extract(
                 query,
                 cargo_names.keys(),
@@ -462,18 +469,20 @@ class SearchService:
                         score=normalized_score,
                         id=row.cargo_id,
                         type="cargo",
+                        tier=row.tier,
                     ))
                     seen_ids.add(row.id)
 
             # Add fuzzy results
             for name, score, _ in fuzzy_results:
-                cargo_id, db_cargo_id = cargo_names[name]
+                cargo_id, db_cargo_id, cargo_tier = cargo_names[name]
                 if cargo_id not in seen_ids:
                     combined_results.append(SearchResult(
                         name=name,
                         score=score,
                         id=db_cargo_id,
                         type="cargo",
+                        tier=cargo_tier,
                     ))
                     seen_ids.add(cargo_id)
 
@@ -486,6 +495,7 @@ class SearchService:
                 score=row.rank_score or 100.0,
                 id=row.cargo_id,
                 type="cargo",
+                tier=getattr(row, "tier", None),
             )
             for row in fts_results[:limit]
         ]

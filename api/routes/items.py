@@ -28,6 +28,7 @@ class SearchResult(BaseModel):
     score: float
     id: int
     type: str | None = None
+    tier: int | None = None
 
 class SearchResponse(BaseModel):
     results: list[SearchResult]
@@ -84,6 +85,7 @@ async def search_items(
             score=result.score,
             id=result.id,
             type=result.type,
+            tier=result.tier,
         )
         for result in search_results
     ]
@@ -130,6 +132,7 @@ async def get_random_items(
             score=100.0,  # Perfect match since it's curated
             id=item.item_id,
             type="item",
+            tier=item.tier,
         )
         for item in random_items
     ]
@@ -140,6 +143,7 @@ async def get_random_items(
             score=100.0,
             id=building.id,
             type="building",
+            tier=None,
         )
         for building in random_buildings
     ]
@@ -150,6 +154,7 @@ async def get_random_items(
             score=100.0,
             id=cargo_item.cargo_id,
             type="cargo",
+            tier=cargo_item.tier,
         )
         for cargo_item in random_cargo
     ]
@@ -210,6 +215,7 @@ async def search_buildings(
             score=result.score,
             id=result.id,
             type=result.type,
+            tier=result.tier,
         )
         for result in search_results
     ]
@@ -238,6 +244,7 @@ async def search_cargo(
             score=result.score,
             id=result.id,
             type=result.type,
+            tier=result.tier,
         )
         for result in search_results
     ]
@@ -270,6 +277,7 @@ async def search_all(
             score=result.score,
             id=result.id,
             type=result.type,
+            tier=result.tier,
         )
         for result in items_results
     ]
@@ -280,6 +288,7 @@ async def search_all(
             score=result.score,
             id=result.id,
             type=result.type,
+            tier=result.tier,
         )
         for result in buildings_results
     ]
@@ -290,6 +299,7 @@ async def search_all(
             score=result.score,
             id=result.id,
             type=result.type,
+            tier=result.tier,
         )
         for result in cargo_results
     ]
@@ -339,6 +349,7 @@ async def get_best_match_endpoint(
             score=best_result.score,
             id=best_result.id,
             type=best_result.type,
+            tier=getattr(best_result, "tier", None),
         )
     return None
 

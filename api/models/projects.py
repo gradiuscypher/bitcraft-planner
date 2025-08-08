@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, foreign
 
 from database import Base
 
@@ -47,6 +47,7 @@ class ProjectItem(BaseModel):
     name: str
     count: int
     target_count: int
+    tier: int | None = None
 
 
 class ProjectItemOrm(Base):
@@ -54,12 +55,27 @@ class ProjectItemOrm(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     item_id: Mapped[int] = mapped_column(ForeignKey("game_items.id"), nullable=False)
-    item: Mapped["GameItemOrm"] = relationship("GameItemOrm")
+    # Read-only relationship to game item using external item_id key
+    # The physical FK points to game_items.id in DB, but we store BitCraft's item_id here.
+    # Use a custom join so we can still access related fields like tier.
+    item: Mapped["GameItemOrm"] = relationship(
+        "GameItemOrm",
+        primaryjoin="ProjectItemOrm.item_id == foreign(GameItemOrm.item_id)",
+        viewonly=True,
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     count: Mapped[int] = mapped_column(Integer, nullable=False)
     target_count: Mapped[int] = mapped_column(Integer, nullable=False)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     project: Mapped["ProjectOrm"] = relationship("ProjectOrm", back_populates="items")
+
+    @property
+    def tier(self) -> int | None:  # surfaced to API via Pydantic ProjectItem
+        # When the related game item is loaded, expose its tier
+        try:
+            return getattr(self.item, "tier", None)
+        except Exception:
+            return None
 
 
 class ProjectOrm(Base):

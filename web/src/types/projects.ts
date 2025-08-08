@@ -11,6 +11,7 @@ export interface ProjectItem {
   name: string;
   count: number;
   target_count: number;
+  tier?: number | null;
 }
 
 export interface ProjectWithItems extends Project {

@@ -28,6 +28,7 @@ export function RecipeTreeFlow({ itemId, itemName, onAddToProject }: RecipeTreeF
   const [projects, setProjects] = useState<ProjectWithItems[]>([])
   const [selectedProject, setSelectedProject] = useState<number | null>(null)
   const [addingToProject, setAddingToProject] = useState(false)
+  const [itemTiers, setItemTiers] = useState<Record<number, number>>({})
 
   const loadRecipeTree = async () => {
     if (!itemId) return
@@ -38,6 +39,24 @@ export function RecipeTreeFlow({ itemId, itemName, onAddToProject }: RecipeTreeF
     try {
       const tree = await apiService.getItemRecipeTree(itemId, amount)
       setRecipeTree(tree)
+      // Preload tiers for base materials
+      try {
+        const uniqueIds = Array.from(new Set(tree.base_materials.map((m) => m.item_id)))
+        const results = await Promise.allSettled(uniqueIds.map((id) => apiService.getItem(id)))
+        const nextMap: Record<number, number> = {}
+        results.forEach((res, idx) => {
+          if (res.status === 'fulfilled') {
+            const tier = (res.value as any).tier as number | undefined
+            if (typeof tier === 'number') {
+              nextMap[uniqueIds[idx]] = tier
+            }
+          }
+        })
+        setItemTiers((prev) => ({ ...prev, ...nextMap }))
+      } catch (tierErr) {
+        // Ignore tier preload errors
+        console.warn('Failed to preload item tiers for base materials', tierErr)
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load recipe tree. This item may not have a craftable recipe.'
       setError(errorMessage)
@@ -209,7 +228,7 @@ export function RecipeTreeFlow({ itemId, itemName, onAddToProject }: RecipeTreeF
             </div>
 
             {/* Base materials grid */}
-            {recipeTree.base_materials.length > 0 && (
+                {recipeTree.base_materials.length > 0 && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
                   {recipeTree.base_materials.map((material) => (
@@ -222,9 +241,17 @@ export function RecipeTreeFlow({ itemId, itemName, onAddToProject }: RecipeTreeF
                         <div className="flex items-center gap-2 min-w-0">
                           <Package className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
                           <div className="min-w-0">
-                            <span className="font-medium text-sm text-green-900 dark:text-green-100 block truncate">
-                              {material.item_name}
-                            </span>
+                                <span className="font-medium text-sm text-green-900 dark:text-green-100 block truncate flex items-center gap-2">
+                                  <span className="truncate">{material.item_name}</span>
+                                  {/* Show tier if known */}
+                                  {itemTiers[material.item_id] ? (
+                                    <span className="flex-shrink-0">
+                                      <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 text-[10px] h-5 px-1.5">
+                                        T{itemTiers[material.item_id]}
+                                      </Badge>
+                                    </span>
+                                  ) : null}
+                                </span>
                             <p className="text-xs text-green-600 dark:text-green-400">
                               Click for details
                             </p>

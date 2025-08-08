@@ -20,6 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { AddToProject } from "@/components/add-to-project"
+import { TierTag } from "@/components/tier-tag"
 import { RecipeTreeFlow } from "@/components/recipe-tree-flow"
 import { apiService, type ItemDetail, type BuildingDetail, type CargoDetail, type Recipe } from '@/lib/api'
 
@@ -30,6 +31,7 @@ interface ConsumedItemWithName {
   amount: number
   recipe_id: number
   name: string
+  tier?: number
 }
 
 export function ItemDetail() {
@@ -108,7 +110,8 @@ export function ItemDetail() {
                 const itemDetails = await apiService.getItem(consumedItem.item_id)
                 consumedItemsWithNames.push({
                   ...consumedItem,
-                  name: itemDetails.name
+                  name: itemDetails.name,
+                  tier: (itemDetails as any).tier as number | undefined
                 })
               } catch (itemError) {
                 console.error(`Failed to fetch name for item ${consumedItem.item_id}:`, itemError)
@@ -251,7 +254,12 @@ export function ItemDetail() {
               {getItemIcon(type || null)}
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-foreground">{item.name}</h1>
+              <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+                <span>{item.name}</span>
+                {type === 'item' && (
+                  <TierTag tier={(item as any).tier as number | undefined} size="md" />
+                )}
+              </h1>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="secondary" className={getItemTypeColor(type || null)}>
                   {type}
@@ -402,7 +410,10 @@ export function ItemDetail() {
                                           className="p-0 h-auto text-sm hover:text-primary"
                                           onClick={() => navigate(`/item/${consumedItem.item_id}`)}
                                         >
-                                          {itemWithName?.name || `Item ${consumedItem.item_id}`}
+                                          <span className="flex items-center gap-2">
+                                            <span>{itemWithName?.name || `Item ${consumedItem.item_id}`}</span>
+                                            <TierTag tier={itemWithName?.tier} />
+                                          </span>
                                         </Button>
                                         <Badge variant="outline">×{consumedItem.amount}</Badge>
                                       </div>

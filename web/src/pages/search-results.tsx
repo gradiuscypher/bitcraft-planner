@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AddToProject } from "@/components/add-to-project"
+import { TierTag } from "@/components/tier-tag"
 import { apiService, type SearchResult, type SearchAllResponse } from '@/lib/api'
 
 export function SearchResults() {
@@ -111,7 +112,10 @@ export function SearchResults() {
                   <div className="text-primary">
                     {getItemIcon(item.type)}
                   </div>
-                  <CardTitle className="text-lg">{item.name}</CardTitle>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <span>{item.name}</span>
+                    <TierTag tier={item.tier ?? null} />
+                  </CardTitle>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </div>
@@ -233,7 +237,10 @@ export function SearchResults() {
                           <div className="text-primary">
                             {getItemIcon(item.type)}
                           </div>
-                          <CardTitle className="text-lg">{item.name}</CardTitle>
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <span>{item.name}</span>
+                            <TierTag tier={item.tier ?? null} />
+                          </CardTitle>
                         </div>
                         <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       </div>

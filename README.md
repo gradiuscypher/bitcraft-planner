@@ -3,13 +3,14 @@ Crafting planner for Bitcraft Online
 
 # Feedback
 - Buildings are not loading?
-- Update item counts by setting a specific number, not just plus and minus
+- Provide filters for items (tiers, completed, future - filter by related skills of your character)
 - show the item's tier wherever an item name is listed, eg: in the search results
 - organize the project list by item tiers, maybe other sorts as well? option to hide completed items?
 - highlight items that are crafted vs gathered in the project list?
 
 # Working on
 - Clean up TODO
+- Link character to Discord account by saying something in chat?
 - Do not show item results that don't have recipes
 - Figure out a better way to deal with the recipes that can use mutliple rarities of items
 - When someone adds an item from a project page, it should remember what project was selected and use that as the default
