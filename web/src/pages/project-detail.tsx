@@ -35,7 +35,10 @@ import {
   Minus,
   Filter,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import {
   Table,
@@ -71,6 +74,20 @@ export function ProjectDetailPage() {
     }
   });
   const [expandedItemIds, setExpandedItemIds] = useState<Set<number>>(new Set());
+  const [sortKey, setSortKey] = useState<'name' | 'tier' | 'progress'>(() => {
+    if (!projectId) return 'name'
+    try {
+      const v = localStorage.getItem(`project:${projectId}:sortKey`)
+      return v === 'tier' || v === 'progress' || v === 'name' ? v : 'name'
+    } catch { return 'name' }
+  })
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>(() => {
+    if (!projectId) return 'asc'
+    try {
+      const v = localStorage.getItem(`project:${projectId}:sortDir`)
+      return v === 'desc' ? 'desc' : 'asc'
+    } catch { return 'asc' }
+  })
   
   // Use polling hooks for automatic updates
   const { 
@@ -210,6 +227,14 @@ export function ProjectDetailPage() {
     } catch {}
   }, [projectId, viewMode]);
 
+  useEffect(() => {
+    if (!projectId) return
+    try {
+      localStorage.setItem(`project:${projectId}:sortKey`, sortKey)
+      localStorage.setItem(`project:${projectId}:sortDir`, sortDir)
+    } catch {}
+  }, [projectId, sortKey, sortDir])
+
   // Collapse expanded table rows when collapse-all is triggered
   useEffect(() => {
     setExpandedItemIds(new Set());
@@ -267,6 +292,39 @@ export function ProjectDetailPage() {
     if (total === 0) return 0;
     return Math.round((getTotalCompletedItems() / total) * 100);
   };
+
+  const getItemProgress = (item: ProjectItem) => {
+    if (item.target_count <= 0) return 0
+    return Math.round((item.count / item.target_count) * 100)
+  }
+
+  const sortedFilteredItems = useMemo(() => {
+    const items = (project?.items ?? []).filter((i) => !hideCompleted || i.count < i.target_count)
+    const itemsWithProgress = items.map(i => ({ i, name: i.name.toLowerCase(), tier: i.tier ?? 9999, progress: getItemProgress(i) }))
+    itemsWithProgress.sort((a, b) => {
+      let cmp = 0
+      if (sortKey === 'name') {
+        cmp = a.name.localeCompare(b.name)
+      } else if (sortKey === 'tier') {
+        cmp = a.tier - b.tier
+      } else {
+        cmp = a.progress - b.progress
+      }
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return itemsWithProgress.map(x => x.i)
+  }, [project?.items, hideCompleted, sortKey, sortDir])
+
+  const cycleSort = (key: 'name' | 'tier' | 'progress') => {
+    setSortKey(prevKey => {
+      if (prevKey !== key) {
+        setSortDir('asc')
+        return key
+      }
+      setSortDir(prevDir => (prevDir === 'asc' ? 'desc' : 'asc'))
+      return prevKey
+    })
+  }
 
   const handleDeleteProject = async () => {
     if (!project) return;
@@ -677,9 +735,42 @@ export function ProjectDetailPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-8"></TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Tier</TableHead>
-                          <TableHead className="text-right">Progress</TableHead>
+                          <TableHead>
+                            <button type="button" className="inline-flex items-center gap-1" onClick={() => cycleSort('name')}>
+                              Name
+                              {sortKey !== 'name' ? (
+                                <ArrowUpDown className="h-3.5 w-3.5 opacity-60" />
+                              ) : sortDir === 'asc' ? (
+                                <ArrowUp className="h-3.5 w-3.5" />
+                              ) : (
+                                <ArrowDown className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </TableHead>
+                          <TableHead>
+                            <button type="button" className="inline-flex items-center gap-1" onClick={() => cycleSort('tier')}>
+                              Tier
+                              {sortKey !== 'tier' ? (
+                                <ArrowUpDown className="h-3.5 w-3.5 opacity-60" />
+                              ) : sortDir === 'asc' ? (
+                                <ArrowUp className="h-3.5 w-3.5" />
+                              ) : (
+                                <ArrowDown className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </TableHead>
+                          <TableHead className="text-right">
+                            <button type="button" className="inline-flex items-center gap-1" onClick={() => cycleSort('progress')}>
+                              Progress
+                              {sortKey !== 'progress' ? (
+                                <ArrowUpDown className="h-3.5 w-3.5 opacity-60" />
+                              ) : sortDir === 'asc' ? (
+                                <ArrowUp className="h-3.5 w-3.5" />
+                              ) : (
+                                <ArrowDown className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </TableHead>
                           <TableHead className="text-right">Count</TableHead>
                           {canUserModifyProject(project) && (
                             <TableHead className="text-right">Actions</TableHead>
@@ -687,7 +778,7 @@ export function ProjectDetailPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {project.items?.filter((i) => !hideCompleted || i.count < i.target_count).map((item) => {
+                        {sortedFilteredItems.map((item) => {
                           const itemProgress = item.target_count > 0 ? Math.round((item.count / item.target_count) * 100) : 0;
                           const expanded = expandedItemIds.has(item.item_id);
                           const colSpan = canUserModifyProject(project) ? 6 : 5;
