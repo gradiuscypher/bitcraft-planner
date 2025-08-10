@@ -36,6 +36,16 @@ import {
   Filter,
   ChevronDown
 } from 'lucide-react';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+} from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProtectedRoute } from '@/components/protected-route';
 import type { ProjectWithItems, ProjectItem } from '@/types/projects';
 import { ProjectItemIngredients } from '@/components/project-item-ingredients'
@@ -50,6 +60,15 @@ export function ProjectDetailPage() {
   const [hideCompleted, setHideCompleted] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [collapseAllSignal, setCollapseAllSignal] = useState(0);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
+    if (!projectId) return 'table';
+    try {
+      const stored = localStorage.getItem(`project:${projectId}:viewMode`);
+      return stored === 'cards' || stored === 'table' ? stored : 'table';
+    } catch {
+      return 'table';
+    }
+  });
   
   // Use polling hooks for automatic updates
   const { 
@@ -181,6 +200,13 @@ export function ProjectDetailPage() {
       localStorage.setItem(`${prefix}:openSections`, JSON.stringify(openSections));
     } catch {}
   }, [projectId, openSections]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    try {
+      localStorage.setItem(`project:${projectId}:viewMode`, viewMode);
+    } catch {}
+  }, [projectId, viewMode]);
 
 
   const getCurrentCount = (itemId: number, fallback: number) => {
@@ -332,50 +358,57 @@ export function ProjectDetailPage() {
             </div>
           </div>
 
-          {canUserModifyProject(project) && (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" className="flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Project Settings
-              </Button>
-              {hasPendingChanges && (
-                <Button 
-                  onClick={handleSaveAllCounts}
-                  disabled={isSavingCounts}
-                  className="flex items-center gap-2"
-                >
-                  {isSavingCounts ? 'Saving…' : 'Save Changes'}
+          <div className="flex items-center gap-3">
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'cards' | 'table')}>
+              <TabsList>
+                <TabsTrigger value="cards">Cards</TabsTrigger>
+                <TabsTrigger value="table">Table</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {canUserModifyProject(project) && (
+              <>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Project Settings
                 </Button>
-              )}
-              
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2 text-destructive hover:text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                    Delete Project
+                {hasPendingChanges && (
+                  <Button 
+                    onClick={handleSaveAllCounts}
+                    disabled={isSavingCounts}
+                    className="flex items-center gap-2"
+                  >
+                    {isSavingCounts ? 'Saving…' : 'Save Changes'}
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Project</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to delete "{project.name}"? This action cannot be undone.
-                      All project items will be removed.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDeleteProject}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
+                )}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2 text-destructive hover:text-destructive">
+                      <Trash2 className="h-4 w-4" />
                       Delete Project
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete "{project.name}"? This action cannot be undone.
+                        All project items will be removed.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteProject}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Delete Project
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -472,7 +505,7 @@ export function ProjectDetailPage() {
                       <Button onClick={() => navigate('/search/advanced')}>Add Items</Button>
                     )}
                   </div>
-                ) : (
+                ) : viewMode === 'cards' ? (
                   <div className="space-y-3">
                     {tierSections.map(({ key, label, tier }) => {
                       const itemsInTier = groupedByTier[key] || [];
@@ -630,6 +663,120 @@ export function ProjectDetailPage() {
                         </div>
                       );
                     })}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Tier</TableHead>
+                          <TableHead className="text-right">Progress</TableHead>
+                          <TableHead className="text-right">Count</TableHead>
+                          {canUserModifyProject(project) && (
+                            <TableHead className="text-right">Actions</TableHead>
+                          )}
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {project.items?.filter((i) => !hideCompleted || i.count < i.target_count).map((item) => {
+                          const itemProgress = item.target_count > 0 ? Math.round((item.count / item.target_count) * 100) : 0;
+                          return (
+                            <TableRow key={`row-${project.id}-${item.item_id}`}>
+                              <TableCell className="font-medium">
+                                {item.name}
+                              </TableCell>
+                              <TableCell>
+                                <TierTag tier={item.tier ?? null} />
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <span className="text-sm text-muted-foreground">{itemProgress}%</span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <span className="text-sm text-foreground">{getCurrentCount(item.item_id, item.count)} / {item.target_count}</span>
+                              </TableCell>
+                              {canUserModifyProject(project) && (
+                                <TableCell className="text-right">
+                                  <div className="inline-flex items-center gap-1">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const current = getCurrentCount(item.item_id, item.count);
+                                        setPendingCount(item.item_id, Math.max(0, current - 1), item.count);
+                                      }}
+                                      disabled={getCurrentCount(item.item_id, item.count) <= 0}
+                                      className="h-7 w-7 p-0"
+                                    >
+                                      <Minus className="h-3 w-3" />
+                                    </Button>
+                                    <Input
+                                      type="number"
+                                      inputMode="numeric"
+                                      min={0}
+                                      max={item.target_count}
+                                      value={getCurrentCount(item.item_id, item.count)}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        const parsed = Number(val);
+                                        if (Number.isNaN(parsed)) {
+                                          setPendingCount(item.item_id, 0, item.count);
+                                        } else {
+                                          const clamped = Math.min(Math.max(0, parsed), item.target_count);
+                                          setPendingCount(item.item_id, clamped, item.count);
+                                        }
+                                      }}
+                                      className="h-7 w-20 px-2 text-center text-xs"
+                                    />
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const current = getCurrentCount(item.item_id, item.count);
+                                        setPendingCount(
+                                          item.item_id,
+                                          Math.min(item.target_count, current + 1),
+                                          item.count
+                                        );
+                                      }}
+                                      disabled={getCurrentCount(item.item_id, item.count) >= item.target_count}
+                                      className="h-7 w-7 p-0"
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7 w-7 p-0">
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Remove Item</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to remove "{item.name}" from this project?
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => handleRemoveItem(item.item_id)}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                          >
+                                            Remove Item
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                </TableCell>
+                              )}
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                      <TableCaption>Adjust counts inline or remove items. Cards/Table choice is saved for this project.</TableCaption>
+                    </Table>
                   </div>
                 )}
               </CardContent>

@@ -516,16 +516,16 @@ export function ProjectsPage() {
                       </TableRow>
                       {expanded && (
                         <TableRow data-no-nav>
-                          <TableCell colSpan={6} className="bg-muted/30">
-                            <div className="py-3 px-1 text-sm flex flex-col gap-2">
+                          <TableCell colSpan={6} className="bg-muted">
+                            <div className="py-3 px-2 text-sm flex flex-col gap-2">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-muted-foreground">Project #{project.id}</span>
+                                <span className="text-foreground">Project #{project.id}</span>
                                 {project.group_id && (
                                   <Badge variant="secondary">Group #{project.group_id}</Badge>
                                 )}
                               </div>
                               <div>
-                                <span className="text-muted-foreground">Items:</span>{' '}
+                                <span className="text-foreground">Items:</span>{' '}
                                 {project.items && project.items.length > 0 ? (
                                   <span>
                                     {project.items.slice(0, 6).map((it, idx) => (
@@ -535,11 +535,11 @@ export function ProjectsPage() {
                                       </span>
                                     ))}
                                     {project.items.length > 6 && (
-                                      <span className="text-muted-foreground ml-2">+{project.items.length - 6} more</span>
+                                      <span className="text-foreground/80 ml-2">+{project.items.length - 6} more</span>
                                     )}
                                   </span>
                                 ) : (
-                                  <span className="text-muted-foreground">No items yet</span>
+                                  <span className="text-foreground/80">No items yet</span>
                                 )}
                               </div>
                             </div>
