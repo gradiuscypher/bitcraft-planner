@@ -500,7 +500,7 @@ export function ProjectDetailPage() {
                       const isCompleted = item.count >= item.target_count;
                       
                       return (
-                        <div key={item.id} className={`border rounded-lg p-3 space-y-2`}>
+                        <div key={`item-${project.id}-${item.item_id}`} className={`border rounded-lg p-3 space-y-2`}>
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1 mb-1">
@@ -615,7 +615,12 @@ export function ProjectDetailPage() {
                           )}
 
                           {/* Ingredients expander */}
-                          <ProjectItemIngredients itemId={item.item_id} itemName={item.name} collapseAllSignal={collapseAllSignal} />
+                          <ProjectItemIngredients
+                            itemId={item.item_id}
+                            itemName={item.name}
+                            collapseAllSignal={collapseAllSignal}
+                            persistKey={`${project.id}:${item.item_id}`}
+                          />
                         </div>
                       );
                                 })}

@@ -9,14 +9,138 @@ interface ProjectItemIngredientsProps {
   itemName: string
   /** When this number changes, collapse all nested toggles */
   collapseAllSignal?: number
+  /** Persist key for remembering open state (e.g., `${projectId}:${itemId}`) */
+  persistKey?: string
 }
 
-export function ProjectItemIngredients({ itemId, itemName, collapseAllSignal }: ProjectItemIngredientsProps) {
-  const [open, setOpen] = useState(false)
+interface NestedIngredientsLayerProps {
+  materials: RecipeTreeItem[]
+  depth: number
+  maxDepth: number
+  collapseAllSignalForLayer: number
+}
+
+function NestedIngredientsLayer({ materials, depth, maxDepth, collapseAllSignalForLayer }: NestedIngredientsLayerProps) {
+  const [states, setStates] = useState<Record<number, { open: boolean; loading: boolean; error: string | null; children: RecipeTreeItem[] | null }>>({})
+
+  useEffect(() => {
+    // Collapse all in this layer
+    setStates((prev) => {
+      const next: typeof prev = {}
+      for (const [k, v] of Object.entries(prev)) {
+        next[Number(k)] = { ...v, open: false }
+      }
+      return next
+    })
+  }, [collapseAllSignalForLayer])
+
+  const handleToggle = async (m: RecipeTreeItem) => {
+    const canExpand = depth < maxDepth
+    if (!canExpand) return
+    const current = states[m.item_id] || { open: false, loading: false, error: null, children: null }
+    const nextOpen = !current.open
+    setStates((prev) => ({ ...prev, [m.item_id]: { ...current, open: nextOpen } }))
+    if (nextOpen && current.children === null && !current.loading) {
+      setStates((prev) => ({ ...prev, [m.item_id]: { ...current, open: true, loading: true, error: null } }))
+      try {
+        const resp = await apiService.getItemRecipeTree(m.item_id, m.amount, true)
+        const mats = resp.base_materials || []
+        setStates((prev) => ({ ...prev, [m.item_id]: { open: true, loading: false, error: null, children: mats } }))
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Failed to load sub-ingredients'
+        if (typeof msg === 'string' && msg.includes('404')) {
+          setStates((prev) => ({ ...prev, [m.item_id]: { open: true, loading: false, error: null, children: [] } }))
+        } else {
+          setStates((prev) => ({ ...prev, [m.item_id]: { open: true, loading: false, error: msg, children: null } }))
+        }
+      }
+    }
+  }
+
+  return (
+    <div className="space-y-1">
+      {materials.map((m) => {
+        const state = states[m.item_id]
+        const isOpen = !!state?.open
+        const isLoading = !!state?.loading
+        const err = state?.error || null
+        const children = state?.children
+        const canExpand = depth < maxDepth
+        return (
+          <div key={`${depth}-${m.item_id}-${m.amount}`} className="rounded border bg-background">
+            <div className="flex items-center justify-between px-2 py-1">
+              <div className="flex items-center gap-1 min-w-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => handleToggle(m)}
+                  title={canExpand ? 'View sub-ingredients' : 'Max depth reached'}
+                  disabled={!canExpand}
+                >
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? '' : '-rotate-90'} ${canExpand ? '' : 'opacity-30'}`} />
+                </Button>
+                <a
+                  href={`/item/${m.item_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-w-0 text-sm font-medium truncate text-foreground hover:underline"
+                  title={m.item_name}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {m.item_name}
+                </a>
+              </div>
+              <Badge className="ml-2">×{m.amount}</Badge>
+            </div>
+            {isOpen && (
+              <div className="px-2 pb-2">
+                {isLoading && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2" />
+                    Loading…
+                  </div>
+                )}
+                {err && (
+                  <div className="text-xs text-destructive">{err}</div>
+                )}
+                {!isLoading && !err && (
+                  children && children.length > 0 ? (
+                    <div className="mt-1">
+                      <NestedIngredientsLayer
+                        materials={children}
+                        depth={depth + 1}
+                        maxDepth={maxDepth}
+                        collapseAllSignalForLayer={collapseAllSignalForLayer}
+                      />
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground mt-1">No sub-ingredients</div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+export function ProjectItemIngredients({ itemId, itemName, collapseAllSignal, persistKey }: ProjectItemIngredientsProps) {
+  const [open, setOpen] = useState(() => {
+    if (!persistKey) return false
+    try {
+      return localStorage.getItem(`ingredients-open:${persistKey}`) === '1'
+    } catch {
+      return false
+    }
+  })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tree, setTree] = useState<RecipeTreeResponse | null>(null)
-  const [subStates, setSubStates] = useState<Record<number, { open: boolean; loading: boolean; error: string | null; materials: RecipeTreeItem[] | null }>>({})
+  // Cache collapse signal to avoid re-render toggling open state due to parent rerenders
+  const [lastCollapseSignal, setLastCollapseSignal] = useState<number | undefined>(() => collapseAllSignal)
 
   const loadTree = async () => {
     setLoading(true)
@@ -35,6 +159,10 @@ export function ProjectItemIngredients({ itemId, itemName, collapseAllSignal }: 
   const toggleOpen = async () => {
     const next = !open
     setOpen(next)
+    console.debug('[Ingredients] toggleOpen', { itemId, next, persistKey })
+    if (persistKey) {
+      try { localStorage.setItem(`ingredients-open:${persistKey}`, next ? '1' : '0') } catch {}
+    }
     if (next && !tree && !loading) {
       await loadTree()
     }
@@ -45,43 +173,29 @@ export function ProjectItemIngredients({ itemId, itemName, collapseAllSignal }: 
     await loadTree()
   }
 
-  const toggleSub = async (subItemId: number, subAmount: number) => {
-    const current = subStates[subItemId] || { open: false, loading: false, error: null, materials: null }
-    const nextOpen = !current.open
-    setSubStates((prev) => ({ ...prev, [subItemId]: { ...current, open: nextOpen } }))
-    if (nextOpen && current.materials === null && !current.loading) {
-      setSubStates((prev) => ({ ...prev, [subItemId]: { ...current, open: true, loading: true, error: null } }))
-      try {
-        const resp = await apiService.getItemRecipeTree(subItemId, subAmount, true)
-        const mats = resp.base_materials || []
-        setSubStates((prev) => ({ ...prev, [subItemId]: { open: true, loading: false, error: null, materials: mats } }))
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Failed to load sub-ingredients'
-        // Treat 404 as "no sub-ingredients"
-        if (typeof msg === 'string' && msg.includes('404')) {
-          setSubStates((prev) => ({ ...prev, [subItemId]: { open: true, loading: false, error: null, materials: [] } }))
-        } else {
-          setSubStates((prev) => ({ ...prev, [subItemId]: { open: true, loading: false, error: msg, materials: null } }))
-        }
-      }
-    }
-  }
+  // (Removed inline IngredientsLayer to avoid remounts on parent rerenders)
 
-  // Respond to external collapse-all signal by closing all nested toggles
-  // without changing the top-level visibility
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Close the top-level dropdown when a global collapse is triggered.
   useEffect(() => {
     if (collapseAllSignal === undefined) return
-    // Close top-level dropdown
-    setOpen(false)
-    setSubStates((prev) => {
-      const next: typeof prev = {}
-      for (const [k, v] of Object.entries(prev)) {
-        next[Number(k)] = { ...v, open: false }
+    if (lastCollapseSignal !== collapseAllSignal) {
+      console.debug('[Ingredients] collapseAllSignal changed -> closing', { itemId, collapseAllSignal, lastCollapseSignal })
+      setOpen(false)
+      if (persistKey) {
+        try { localStorage.setItem(`ingredients-open:${persistKey}`, '0') } catch {}
       }
-      return next
-    })
-  }, [collapseAllSignal])
+      setLastCollapseSignal(collapseAllSignal)
+    }
+  }, [collapseAllSignal, lastCollapseSignal])
+
+  // Persist on open state change (user-driven, not collapse-all)
+  useEffect(() => {
+    if (!persistKey) return
+    try {
+      localStorage.setItem(`ingredients-open:${persistKey}`, open ? '1' : '0')
+      console.debug('[Ingredients] persist state', { itemId, open, persistKey })
+    } catch {}
+  }, [open, persistKey])
 
   return (
     <div className="mt-2">
@@ -111,7 +225,7 @@ export function ProjectItemIngredients({ itemId, itemName, collapseAllSignal }: 
               </Button>
             </div>
           )}
-          {!loading && !error && tree && (
+          {!loading && !error && tree && open && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm">
@@ -130,79 +244,7 @@ export function ProjectItemIngredients({ itemId, itemName, collapseAllSignal }: 
               {tree.base_materials.length === 0 ? (
                 <div className="text-sm text-muted-foreground">No base materials. This item may not have a craftable recipe.</div>
               ) : (
-                <div className="space-y-1">
-                  {tree.base_materials.map((m) => {
-                    const sub = subStates[m.item_id]
-                    const isOpen = sub?.open
-                    const isLoading = sub?.loading
-                    const err = sub?.error
-                    const materials = sub?.materials
-                    return (
-                      <div key={`${m.item_id}-${m.amount}`} className="rounded border bg-background">
-                        <div className="flex items-center justify-between px-2 py-1">
-                          <div className="flex items-center gap-1 min-w-0">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() => toggleSub(m.item_id, m.amount)}
-                              title="View sub-ingredients"
-                            >
-                              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? '' : '-rotate-90'}`} />
-                            </Button>
-                            <a
-                              href={`/item/${m.item_id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="min-w-0 text-sm font-medium truncate text-foreground hover:underline"
-                              title={m.item_name}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {m.item_name}
-                            </a>
-                          </div>
-                          <Badge className="ml-2">×{m.amount}</Badge>
-                        </div>
-                        {isOpen && (
-                          <div className="px-2 pb-2">
-                            {isLoading && (
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2" />
-                                Loading…
-                              </div>
-                            )}
-                            {err && (
-                              <div className="text-xs text-destructive">{err}</div>
-                            )}
-                            {!isLoading && !err && (
-                              materials && materials.length > 0 ? (
-                                <div className="space-y-1 mt-1">
-                                  {materials.map((sm) => (
-                                    <div key={`${sm.item_id}-${sm.amount}`} className="flex items-center justify-between rounded border bg-muted/40 px-2 py-1">
-                                      <a
-                                        href={`/item/${sm.item_id}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="min-w-0 text-sm truncate text-foreground hover:underline"
-                                        title={sm.item_name}
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        {sm.item_name}
-                                      </a>
-                                      <Badge className="ml-2" variant="secondary">×{sm.amount}</Badge>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="text-xs text-muted-foreground mt-1">No sub-ingredients</div>
-                              )
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
+                <NestedIngredientsLayer materials={tree.base_materials} depth={1} maxDepth={5} collapseAllSignalForLayer={collapseAllSignal ?? 0} />
               )}
             </div>
           )}
