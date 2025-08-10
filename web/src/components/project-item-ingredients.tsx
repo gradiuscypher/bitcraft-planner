@@ -173,6 +173,15 @@ export function ProjectItemIngredients({ itemId, itemName, collapseAllSignal, pe
     await loadTree()
   }
 
+  // If opening from persisted state and data isn't loaded yet, kick off load
+  useEffect(() => {
+    if (open && !tree && !loading) {
+      // Fire and forget; spinner will appear as loading flips
+      void loadTree()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   // (Removed inline IngredientsLayer to avoid remounts on parent rerenders)
 
   // Close the top-level dropdown when a global collapse is triggered.
@@ -209,7 +218,7 @@ export function ProjectItemIngredients({ itemId, itemName, collapseAllSignal, pe
         {open ? 'Hide Ingredients' : 'View Ingredients'}
       </Button>
 
-      {open && (
+      {open && (loading || error || tree) && (
         <div className="mt-2 border rounded-md p-2 bg-muted/30">
           {loading && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
