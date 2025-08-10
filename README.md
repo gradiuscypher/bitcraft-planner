@@ -4,32 +4,28 @@ Crafting planner for Bitcraft Online
 # Feedback
 - Buildings are not loading?
 - Provide filters for items (tiers, completed, future - filter by related skills of your character)
-- show the item's tier wherever an item name is listed, eg: in the search results
-- organize the project list by item tiers, maybe other sorts as well? option to hide completed items?
 - highlight items that are crafted vs gathered in the project list?
+- items separated by tiers and then top-level items can be split into raw ingredients
+- can we cache ingredients locally so it doesnt have to query everything? set an expiration
 
 # Working on
 - Clean up TODO
 - Link character to Discord account by saying something in chat?
+- Asset list, asset search
+- Crafting recommendations for your Claim - eg: does someone need an upgrade to their tool?
 - Do not show item results that don't have recipes
 - Figure out a better way to deal with the recipes that can use mutliple rarities of items
 - When someone adds an item from a project page, it should remember what project was selected and use that as the default
 - Page for offering upgrade services, allowing both an individual and a group to cover those upgrade services
 - Some way of tracking a user's skills so that others can know what services they could offer
 - Alerting system for completed crafting stations, character not crafting, etc
-- Don't enable logger in dev
-- Start over with groups / projects models and endpoints, something's defintely gotten too complex
-- Create group UI
-- Test project item endpoints
-- Group crafting planner, allow there to be an owner link and viewer links
 - Need to make building models like the cargo and items
 - Change wording on the main page to remove filler information
 - Have a "Used In" functionality to show what an item is used in
 - Get the skill names from JSON as well so that we can present them in the recipes
-- SQLA implementation, example alembic setup - basic models for recipe sharing
-- Add item icons
-- Items (eg: pickaxe) don't have their use details (eg: power)
+- Add item icons (ref: https://github.com/BitCraftToolBox/brico/blob/4b2b58f66583f59988c825e9d4943cef85c6289c/frontend/src/lib/bitcraft-utils.ts#L117-L123)
 - Change site title
+- Add favicon
 
 # Backlog Sorted
 - Split files for API endpoints
@@ -37,8 +33,6 @@ Crafting planner for Bitcraft Online
 - can people create their own groups that individuals can be invited to for LFW queues
 
 # Backlog Unsorted
-- Speed up API startup
-- Review possible overuse of @staticmethod
 - Metadata for unfurler
 - Explorer for other JSON data in the game files?
 - Some sort of game TODO list - eg "reach 20 in this skill". Can resolve dependencies, so if you need to have a level in something before crafting an item, it can put both on the list

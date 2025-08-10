@@ -139,9 +139,10 @@ class ApiService {
     return this.makeRequest<BuildingType>(`/buildings/type/${buildingTypeId}`)
   }
 
-  async getItemRecipeTree(itemId: number, amount: number = 1): Promise<RecipeTreeResponse> {
+  async getItemRecipeTree(itemId: number, amount: number = 1, firstLevelOnly = false): Promise<RecipeTreeResponse> {
     const params = new URLSearchParams({
-      amount: amount.toString()
+      amount: amount.toString(),
+      first_level_only: firstLevelOnly ? 'true' : 'false'
     })
     // Use a longer timeout for recipe tree calculations (2 minutes)
     return this.makeRequest<RecipeTreeResponse>(`/items/${itemId}/recipe-tree?${params}`, 120000)

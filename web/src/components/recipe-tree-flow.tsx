@@ -37,7 +37,7 @@ export function RecipeTreeFlow({ itemId, itemName, onAddToProject }: RecipeTreeF
     setError(null)
     
     try {
-      const tree = await apiService.getItemRecipeTree(itemId, amount)
+      const tree = await apiService.getItemRecipeTree(itemId, amount, false)
       setRecipeTree(tree)
       // Preload tiers for base materials
       try {

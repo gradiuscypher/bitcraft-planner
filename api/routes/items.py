@@ -354,7 +354,13 @@ async def get_best_match_endpoint(
     return None
 
 
-async def calculate_recipe_tree_by_item(item_id: int, amount: int = 1, depth: int = 0, max_depth: int = 10) -> tuple[list[RecipeTreeStep], list[RecipeTreeItem]]:
+async def calculate_recipe_tree_by_item(
+    item_id: int,
+    amount: int = 1,
+    depth: int = 0,
+    max_depth: int = 10,
+    first_level_only: bool = False,
+) -> tuple[list[RecipeTreeStep], list[RecipeTreeItem]]:
     """
     Recursively calculate all materials needed for an item using its first available non-reforging recipe.
     Returns tuple of (steps, base_materials)
@@ -398,10 +404,22 @@ async def calculate_recipe_tree_by_item(item_id: int, amount: int = 1, depth: in
         return [], [base_material]
     
     # Use the first suitable recipe
-    return await calculate_recipe_tree_by_recipe(suitable_recipe_id, amount, depth, max_depth)
+    return await calculate_recipe_tree_by_recipe(
+        suitable_recipe_id,
+        amount,
+        depth,
+        max_depth,
+        first_level_only=first_level_only,
+    )
 
 
-async def calculate_recipe_tree_by_recipe(recipe_id: int, amount: int = 1, depth: int = 0, max_depth: int = 10) -> tuple[list[RecipeTreeStep], list[RecipeTreeItem]]:
+async def calculate_recipe_tree_by_recipe(
+    recipe_id: int,
+    amount: int = 1,
+    depth: int = 0,
+    max_depth: int = 10,
+    first_level_only: bool = False,
+) -> tuple[list[RecipeTreeStep], list[RecipeTreeItem]]:
     """
     Recursively calculate all materials needed for a specific recipe.
     Returns tuple of (steps, base_materials)
@@ -451,33 +469,37 @@ async def calculate_recipe_tree_by_recipe(recipe_id: int, amount: int = 1, depth
             amount=total_needed
         ))
         
-        # Recursively get materials for this consumed item (use first available recipe)
-        sub_steps, sub_base_materials = await calculate_recipe_tree_by_item(
-            consumed_item.item_id, 
-            total_needed, 
-            depth + 1, 
-            max_depth
-        )
-        
-        steps.extend(sub_steps)
-        
-        # Merge base materials (sum amounts for same items)
-        for sub_base in sub_base_materials:
-            existing = next((bm for bm in base_materials if bm.item_id == sub_base.item_id), None)
-            if existing:
-                existing.amount += sub_base.amount
-            else:
-                base_materials.append(sub_base)
+        if not first_level_only:
+            # Recursively get materials for this consumed item (use first available recipe)
+            sub_steps, sub_base_materials = await calculate_recipe_tree_by_item(
+                consumed_item.item_id,
+                total_needed,
+                depth + 1,
+                max_depth,
+                first_level_only=first_level_only,
+            )
+            steps.extend(sub_steps)
+            
+            # Merge base materials (sum amounts for same items)
+            for sub_base in sub_base_materials:
+                existing = next((bm for bm in base_materials if bm.item_id == sub_base.item_id), None)
+                if existing:
+                    existing.amount += sub_base.amount
+                else:
+                    base_materials.append(sub_base)
     
     # Add current step if we have items
     if current_step_items:
         steps.insert(0, RecipeTreeStep(depth=depth, items=current_step_items))
+        if first_level_only:
+            # For first-level only, treat direct consumed items as the "base" list
+            return steps, list(current_step_items)
     
     return steps, base_materials
 
 
 @items.get("/{item_id}/recipe-tree")
-async def get_item_recipe_tree(item_id: int, amount: int = 1) -> RecipeTreeResponse:
+async def get_item_recipe_tree(item_id: int, amount: int = 1, first_level_only: bool = False) -> RecipeTreeResponse:
     """Get complete recipe tree for an item using its first available non-reforging recipe"""
     
     # Verify item exists
@@ -502,7 +524,11 @@ async def get_item_recipe_tree(item_id: int, amount: int = 1) -> RecipeTreeRespo
         raise HTTPException(status_code=404, detail="No suitable crafting recipe found for this item (only reforging recipes available)")
     
     # Calculate the recipe tree
-    steps, base_materials = await calculate_recipe_tree_by_recipe(suitable_recipe_id, amount)
+    steps, base_materials = await calculate_recipe_tree_by_recipe(
+        suitable_recipe_id,
+        amount,
+        first_level_only=first_level_only,
+    )
     
     return RecipeTreeResponse(
         recipe_id=suitable_recipe_id,
@@ -514,7 +540,7 @@ async def get_item_recipe_tree(item_id: int, amount: int = 1) -> RecipeTreeRespo
 
 
 @items.get("/recipe/{recipe_id}/recipe-tree")
-async def get_recipe_tree(recipe_id: int, amount: int = 1) -> RecipeTreeResponse:
+async def get_recipe_tree(recipe_id: int, amount: int = 1, first_level_only: bool = False) -> RecipeTreeResponse:
     """Get complete recipe tree for a specific recipe ID"""
     
     # Verify recipe exists
@@ -531,7 +557,11 @@ async def get_recipe_tree(recipe_id: int, amount: int = 1) -> RecipeTreeResponse
     item_name = item_orm.name if item_orm else f"Unknown Item {main_produced_item.item_id}"
     
     # Calculate the recipe tree
-    steps, base_materials = await calculate_recipe_tree_by_recipe(recipe_id, amount)
+    steps, base_materials = await calculate_recipe_tree_by_recipe(
+        recipe_id,
+        amount,
+        first_level_only=first_level_only,
+    )
     
     return RecipeTreeResponse(
         recipe_id=recipe_id,

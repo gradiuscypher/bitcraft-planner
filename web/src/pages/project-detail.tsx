@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { ProtectedRoute } from '@/components/protected-route';
 import type { ProjectWithItems, ProjectItem } from '@/types/projects';
+import { ProjectItemIngredients } from '@/components/project-item-ingredients'
 
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -48,6 +49,7 @@ export function ProjectDetailPage() {
   const [isSavingCounts, setIsSavingCounts] = useState(false);
   const [hideCompleted, setHideCompleted] = useState(false);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [collapseAllSignal, setCollapseAllSignal] = useState(0);
   
   // Use polling hooks for automatic updates
   const { 
@@ -446,6 +448,13 @@ export function ProjectDetailPage() {
                       <Filter className="h-4 w-4" />
                       {hideCompleted ? 'Showing Incomplete' : 'Hide Completed'}
                     </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCollapseAllSignal((n) => n + 1)}
+                    >
+                      Collapse all
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -604,6 +613,9 @@ export function ProjectDetailPage() {
                           </div>
                             </div>
                           )}
+
+                          {/* Ingredients expander */}
+                          <ProjectItemIngredients itemId={item.item_id} itemName={item.name} collapseAllSignal={collapseAllSignal} />
                         </div>
                       );
                                 })}
