@@ -452,7 +452,11 @@ export function ProjectsPage() {
                   const expanded = expandedProjectIds.has(project.id);
                   return (
                     <>
-                      <TableRow key={project.id} className="cursor-pointer" onClick={(e) => handleRowClick(project.id, e)}>
+                      <TableRow
+                        key={project.id}
+                        className="cursor-pointer hover:bg-accent/60 data-[state=selected]:bg-accent text-foreground"
+                        onClick={(e) => handleRowClick(project.id, e)}
+                      >
                         <TableCell className="w-8">
                           <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); toggleExpand(project.id); }} aria-label={expanded ? 'Collapse' : 'Expand'}>
                             {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
