@@ -808,6 +808,8 @@ export function ProjectDetailPage() {
                                         itemName={item.name}
                                         collapseAllSignal={collapseAllSignal}
                                         persistKey={`${project.id}:${item.item_id}`}
+                                        forceOpen
+                                        hideToggle
                                       />
                                     </div>
                                   </TableCell>

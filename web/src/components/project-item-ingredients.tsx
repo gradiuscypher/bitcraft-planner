@@ -11,6 +11,10 @@ interface ProjectItemIngredientsProps {
   collapseAllSignal?: number
   /** Persist key for remembering open state (e.g., `${projectId}:${itemId}`) */
   persistKey?: string
+  /** If provided, force the component open without rendering its own toggle */
+  forceOpen?: boolean
+  /** Hide the internal toggle button (useful when parent controls expansion) */
+  hideToggle?: boolean
 }
 
 interface NestedIngredientsLayerProps {
@@ -127,7 +131,7 @@ function NestedIngredientsLayer({ materials, depth, maxDepth, collapseAllSignalF
   )
 }
 
-export function ProjectItemIngredients({ itemId, itemName, collapseAllSignal, persistKey }: ProjectItemIngredientsProps) {
+export function ProjectItemIngredients({ itemId, itemName, collapseAllSignal, persistKey, forceOpen, hideToggle }: ProjectItemIngredientsProps) {
   const [open, setOpen] = useState(() => {
     if (!persistKey) return false
     try {
@@ -173,52 +177,59 @@ export function ProjectItemIngredients({ itemId, itemName, collapseAllSignal, pe
     await loadTree()
   }
 
-  // If opening from persisted state and data isn't loaded yet, kick off load
+  // If opening from persisted state or forced open and data isn't loaded yet, kick off load
   useEffect(() => {
-    if (open && !tree && !loading) {
+    const isOpen = forceOpen || open
+    if (isOpen && !tree && !loading) {
       // Fire and forget; spinner will appear as loading flips
       void loadTree()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  }, [open, forceOpen])
 
   // (Removed inline IngredientsLayer to avoid remounts on parent rerenders)
 
-  // Close the top-level dropdown when a global collapse is triggered.
+  // Close the top-level dropdown when a global collapse is triggered (ignored if forced open).
   useEffect(() => {
     if (collapseAllSignal === undefined) return
     if (lastCollapseSignal !== collapseAllSignal) {
       console.debug('[Ingredients] collapseAllSignal changed -> closing', { itemId, collapseAllSignal, lastCollapseSignal })
-      setOpen(false)
-      if (persistKey) {
-        try { localStorage.setItem(`ingredients-open:${persistKey}`, '0') } catch {}
+      if (!forceOpen) {
+        setOpen(false)
+        if (persistKey) {
+          try { localStorage.setItem(`ingredients-open:${persistKey}`, '0') } catch {}
+        }
       }
       setLastCollapseSignal(collapseAllSignal)
     }
-  }, [collapseAllSignal, lastCollapseSignal])
+  }, [collapseAllSignal, lastCollapseSignal, forceOpen])
 
-  // Persist on open state change (user-driven, not collapse-all)
+  // Persist on open state change (user-driven, not collapse-all), ignored if forced open
   useEffect(() => {
-    if (!persistKey) return
+    if (!persistKey || forceOpen) return
     try {
       localStorage.setItem(`ingredients-open:${persistKey}`, open ? '1' : '0')
       console.debug('[Ingredients] persist state', { itemId, open, persistKey })
     } catch {}
-  }, [open, persistKey])
+  }, [open, persistKey, forceOpen])
+
+  const effectiveOpen = forceOpen || open
 
   return (
     <div className="mt-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={toggleOpen}
-        className="h-7 text-xs px-2 py-1 flex items-center gap-1"
-      >
-        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? '' : '-rotate-90'}`} />
-        {open ? 'Hide Ingredients' : 'View Ingredients'}
-      </Button>
+      {!hideToggle && !forceOpen && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleOpen}
+          className="h-7 text-xs px-2 py-1 flex items-center gap-1"
+        >
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${effectiveOpen ? '' : '-rotate-90'}`} />
+          {effectiveOpen ? 'Hide Ingredients' : 'View Ingredients'}
+        </Button>
+      )}
 
-      {open && (loading || error || tree) && (
+      {effectiveOpen && (loading || error || tree) && (
         <div className="mt-2 border rounded-md p-2 bg-muted/30">
           {loading && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -234,7 +245,7 @@ export function ProjectItemIngredients({ itemId, itemName, collapseAllSignal, pe
               </Button>
             </div>
           )}
-          {!loading && !error && tree && open && (
+          {!loading && !error && tree && effectiveOpen && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm">
