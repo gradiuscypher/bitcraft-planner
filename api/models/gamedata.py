@@ -225,14 +225,15 @@ class SearchResult:
         self,
         name: str,
         score: float,
-        search_id: int,
-        search_type: str,
+        id: int,
+        type: str,
         tier: int | None = None,
     ) -> None:
+        # Lightweight result object used internally by SearchService
         self.name = name
         self.score = score
-        self.search_id = search_id
-        self.search_type = search_type
+        self.id = id
+        self.type = type
         self.tier = tier
 
 

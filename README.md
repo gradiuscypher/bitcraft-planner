@@ -2,13 +2,13 @@
 Crafting planner for Bitcraft Online
 
 # Feedback
-- Buildings are not loading?
-- Provide filters for items (tiers, completed, future - filter by related skills of your character)
-- highlight items that are crafted vs gathered in the project list?
-- can we cache ingredients locally so it doesnt have to query everything? set an expiration
+- Buildings/Cargo are not loading?
 
 # Working on
 - Clean up TODO
+- Provide filters for items (tiers, completed, future - filter by related skills of your character)
+- highlight items that are crafted vs gathered in the project list?
+- can we cache ingredients locally so it doesnt have to query everything? set an expiration
 - Link character to Discord account by saying something in chat?
 - Asset list, asset search
 - Crafting recommendations for your Claim - eg: does someone need an upgrade to their tool?
