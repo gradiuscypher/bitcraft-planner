@@ -100,18 +100,7 @@ class AuthService {
     return !!this.getStoredToken();
   }
 
-  // Test endpoints for demonstration
-  async testPublicEndpoint(): Promise<any> {
-    return this.makeRequest(API_ENDPOINTS.TEST_PUBLIC);
-  }
-
-  async testProtectedEndpoint(): Promise<any> {
-    return this.makeRequest(API_ENDPOINTS.TEST_PROTECTED);
-  }
-
-  async testAdminEndpoint(): Promise<any> {
-    return this.makeRequest(API_ENDPOINTS.TEST_ADMIN);
-  }
+  // Note: test endpoints are not implemented on the backend
 }
 
 // Export a singleton instance

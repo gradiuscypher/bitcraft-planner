@@ -8,15 +8,10 @@ export const API_ENDPOINTS = {
   AUTH_ME: '/auth/me',
   AUTH_LOGOUT: '/auth/logout',
   
-  // Test endpoints
-  TEST_PUBLIC: '/test/public',
-  TEST_PROTECTED: '/test/protected',
-  TEST_ADMIN: '/test/admin',
-  
-  // Search endpoints
-  SEARCH_ITEMS: '/search/items',
-  SEARCH_ALL: '/search/all',
-  SEARCH_BEST: '/search/best',
+  // Search endpoints (backend routes live under /items)
+  SEARCH_ITEMS: '/items/search',
+  SEARCH_ALL: '/items/search/all',
+  SEARCH_BEST: '/items/search/best',
   
   // Groups endpoints
   GROUPS: '/groups/',
