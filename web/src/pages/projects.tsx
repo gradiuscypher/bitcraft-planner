@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { projectsService } from '@/lib/projects-service';
 import { useProjectsPolling, useGroupsPolling } from '@/hooks/use-projects-polling';
@@ -29,18 +29,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Plus, FolderOpen, Settings, Trash2, Calendar, Crown } from 'lucide-react';
+import { Plus, FolderOpen, Settings, Trash2, Calendar, Crown, ChevronRight, ChevronDown } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProtectedRoute } from '@/components/protected-route';
 import type { ProjectWithItems } from '@/types/projects';
+import { 
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+} from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function ProjectsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-  // If auth has resolved and there's no user, redirect immediately
-  if (!authLoading && !user) {
-    return <Navigate to="/login" replace />;
-  }
 
   // Use polling hooks for automatic updates
   const { 
@@ -67,6 +73,19 @@ export function ProjectsPage() {
   const [selectedGroupId, setSelectedGroupId] = useState<string>('personal');
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('projectsViewMode') : null;
+    return stored === 'table' || stored === 'cards' ? stored : 'table';
+  });
+  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('projectsViewMode', viewMode);
+    } catch {
+      // ignore storage errors
+    }
+  }, [viewMode]);
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return;
@@ -106,6 +125,25 @@ export function ProjectsPage() {
       return;
     }
     navigate(`/projects/${projectId}`);
+  };
+
+  const handleRowClick = (projectId: number, event: React.MouseEvent) => {
+    if ((event.target as HTMLElement).closest('button') || (event.target as HTMLElement).closest('[data-no-nav]')) {
+      return;
+    }
+    navigate(`/projects/${projectId}`);
+  };
+
+  const toggleExpand = (projectId: number) => {
+    setExpandedProjectIds(prev => {
+      const next = new Set(prev);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
   };
 
   const isProjectOwner = (project: ProjectWithItems) => {
@@ -165,75 +203,85 @@ export function ProjectsPage() {
             </p>
           </div>
 
-          {/* Create Project Button */}
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Create Project
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Project</DialogTitle>
-                <DialogDescription>
-                  Create a new project to organize your Bitcraft builds and planning.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="project-name">Project Name</Label>
-                  <Input
-                    id="project-name"
-                    placeholder="Enter project name..."
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !isCreating) {
-                        handleCreateProject();
-                      }
-                    }}
-                  />
+          <div className="flex items-center gap-3">
+            {/* View Toggle */}
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'cards' | 'table')}>
+              <TabsList>
+                <TabsTrigger value="cards">Cards</TabsTrigger>
+                <TabsTrigger value="table">Table</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {/* Create Project Button */}
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Project
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Create New Project</DialogTitle>
+                  <DialogDescription>
+                    Create a new project to organize your Bitcraft builds and planning.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="project-name">Project Name</Label>
+                    <Input
+                      id="project-name"
+                      placeholder="Enter project name..."
+                      value={newProjectName}
+                      onChange={(e) => setNewProjectName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !isCreating) {
+                          handleCreateProject();
+                        }
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="project-group">Project Type</Label>
+                    <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select project type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="personal">Personal Project</SelectItem>
+                        {groups
+                          ?.filter((group) => group.can_create_projects)
+                          ?.map((group) => (
+                            <SelectItem key={group.id} value={group.id.toString()}>
+                              Group: {group.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="project-group">Project Type</Label>
-                  <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select project type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="personal">Personal Project</SelectItem>
-                      {groups
-                        ?.filter((group) => group.can_create_projects)
-                        ?.map((group) => (
-                          <SelectItem key={group.id} value={group.id.toString()}>
-                            Group: {group.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCreateDialogOpen(false)}
-                  disabled={isCreating}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleCreateProject}
-                  disabled={!newProjectName.trim() || isCreating}
-                >
-                  {isCreating ? 'Creating...' : 'Create Project'}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCreateDialogOpen(false)}
+                    disabled={isCreating}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleCreateProject}
+                    disabled={!newProjectName.trim() || isCreating}
+                  >
+                    {isCreating ? 'Creating...' : 'Create Project'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Error Display */}
@@ -268,7 +316,7 @@ export function ProjectsPage() {
           </div>
         )}
 
-        {/* Projects Grid */}
+        {/* Projects Listing */}
         {!projects || projects.length === 0 ? (
           <Card className="text-center py-12">
             <CardHeader>
@@ -289,7 +337,7 @@ export function ProjectsPage() {
               </Button>
             </CardContent>
           </Card>
-        ) : (
+        ) : viewMode === 'cards' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
               <Card 
@@ -314,7 +362,6 @@ export function ProjectsPage() {
                       </CardDescription>
                     </div>
                     
-                    {/* Actions for project owners */}
                     {isProjectOwner(project) && (
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="sm">
@@ -353,7 +400,6 @@ export function ProjectsPage() {
                 
                 <CardContent>
                   <div className="space-y-3">
-                    {/* Project Type */}
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Type</span>
                       <Badge variant={project.group_id ? "secondary" : "default"}>
@@ -361,7 +407,6 @@ export function ProjectsPage() {
                       </Badge>
                     </div>
 
-                    {/* Project Status */}
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Status</span>
                       <Badge variant={isProjectOwner(project) ? "default" : "secondary"}>
@@ -369,7 +414,6 @@ export function ProjectsPage() {
                       </Badge>
                     </div>
                     
-                    {/* Items Count */}
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Items</span>
                       <Badge variant="outline">
@@ -377,7 +421,6 @@ export function ProjectsPage() {
                       </Badge>
                     </div>
                     
-                    {/* Group Info (if applicable) */}
                     {project.group_id && (
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Group</span>
@@ -390,6 +433,125 @@ export function ProjectsPage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-8"></TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Items</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {projects.map((project) => {
+                  const expanded = expandedProjectIds.has(project.id);
+                  return (
+                    <>
+                      <TableRow key={project.id} className="cursor-pointer" onClick={(e) => handleRowClick(project.id, e)}>
+                        <TableCell className="w-8">
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); toggleExpand(project.id); }} aria-label={expanded ? 'Collapse' : 'Expand'}>
+                            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </Button>
+                        </TableCell>
+                        <TableCell className="font-medium flex items-center gap-2">
+                          {project.name}
+                          {isProjectOwner(project) && (
+                            <span title="You own this project" data-no-nav>
+                              <Crown className="h-4 w-4 text-yellow-500" />
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={project.group_id ? 'secondary' : 'default'}>
+                            {project.group_id ? `Group: ${getProjectGroup(project)?.name || 'Unknown'}` : 'Personal'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={isProjectOwner(project) ? 'default' : 'secondary'}>
+                            {isProjectOwner(project) ? 'Owner' : 'Shared'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge variant="outline">{getItemsCount(project)}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isProjectOwner(project) && (
+                            <div className="flex items-center gap-1 justify-end">
+                              <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
+                                <Settings className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={(e) => e.stopPropagation()}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{project.name}"? This action cannot be undone.
+                                      All project items will be removed.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteProject(project.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Delete Project
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      {expanded && (
+                        <TableRow data-no-nav>
+                          <TableCell colSpan={6} className="bg-muted/30">
+                            <div className="py-3 px-1 text-sm flex flex-col gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-muted-foreground">Project #{project.id}</span>
+                                {project.group_id && (
+                                  <Badge variant="secondary">Group #{project.group_id}</Badge>
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Items:</span>{' '}
+                                {project.items && project.items.length > 0 ? (
+                                  <span>
+                                    {project.items.slice(0, 6).map((it, idx) => (
+                                      <span key={it.id} className="mr-2">
+                                        <Badge variant="outline">{it.name} × {it.count}</Badge>
+                                        {idx < Math.min(project.items!.length, 6) - 1 ? ' ' : ''}
+                                      </span>
+                                    ))}
+                                    {project.items.length > 6 && (
+                                      <span className="text-muted-foreground ml-2">+{project.items.length - 6} more</span>
+                                    )}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">No items yet</span>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
+                  );
+                })}
+              </TableBody>
+              <TableCaption>Click a row to open a project. Use the chevron to expand details.</TableCaption>
+            </Table>
           </div>
         )}
       </div>

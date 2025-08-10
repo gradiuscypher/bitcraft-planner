@@ -5,7 +5,6 @@ Crafting planner for Bitcraft Online
 - Buildings are not loading?
 - Provide filters for items (tiers, completed, future - filter by related skills of your character)
 - highlight items that are crafted vs gathered in the project list?
-- items separated by tiers and then top-level items can be split into raw ingredients
 - can we cache ingredients locally so it doesnt have to query everything? set an expiration
 
 # Working on
