@@ -316,14 +316,12 @@ export function ProjectDetailPage() {
   }, [project?.items, hideCompleted, sortKey, sortDir])
 
   const cycleSort = (key: 'name' | 'tier' | 'progress') => {
-    setSortKey(prevKey => {
-      if (prevKey !== key) {
-        setSortDir('asc')
-        return key
-      }
-      setSortDir(prevDir => (prevDir === 'asc' ? 'desc' : 'asc'))
-      return prevKey
-    })
+    if (sortKey !== key) {
+      setSortKey(key)
+      setSortDir('asc')
+      return
+    }
+    setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'))
   }
 
   const handleDeleteProject = async () => {
