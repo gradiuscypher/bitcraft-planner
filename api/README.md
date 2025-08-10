@@ -28,6 +28,21 @@ uv sync
 uv run fastapi dev api.py
 ```
 
+### Testing
+
+Run test suite (in-memory DB):
+
+```bash
+ENVIRONMENT=test uv run pytest -vv
+```
+
+Lint and format:
+
+```bash
+uv run ruff check .
+uv run ruff format .
+```
+
 ## API Endpoints
 
 ### Search Endpoints

@@ -2,13 +2,19 @@ from collections.abc import AsyncGenerator
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import DeclarativeBase
 
 from settings import ENVIRONMENT, LOGFIRE_TOKEN, EnvironmentEnum
 
 # Create engine
 if ENVIRONMENT == EnvironmentEnum.TEST:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", connect_args={})
+    # Use a single shared in-memory SQLite DB across the test process
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
 elif ENVIRONMENT == EnvironmentEnum.DEV:
     data_dir = Path.cwd()
     data_dir.mkdir(parents=True, exist_ok=True)

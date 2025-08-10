@@ -7,9 +7,14 @@ import asyncio
 import pytest  # type: ignore[import-untyped]
 from fastapi.testclient import TestClient
 
+import os
+
+# Ensure we run in test mode for in-memory DB
+os.environ.setdefault("ENVIRONMENT", "test")
+
 from api import app
 from database import SessionLocal, init_database
-from models.users import User
+from models.users import UserOrm
 from routes.auth import get_current_user
 
 
@@ -71,11 +76,11 @@ async def ensure_test_users_exist():
     await init_database()
 
     async with SessionLocal() as session:
-        # Check if user 1 exists
-        user1 = User(**TEST_USER_1_DATA)
+        # Create minimal test users (ORM)
+        user1 = UserOrm(**TEST_USER_1_DATA)
         session.add(user1)
 
-        user2 = User(**TEST_USER_2_DATA)
+        user2 = UserOrm(**TEST_USER_2_DATA)
         session.add(user2)
 
         try:

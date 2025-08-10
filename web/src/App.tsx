@@ -6,7 +6,6 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { 
-  Settings, 
   Hammer,
   BookOpen,
   Users,
@@ -16,6 +15,7 @@ import {
 } from 'lucide-react'
 import { SearchDropdown } from '@/components/search-dropdown'
 import { UserNav } from '@/components/user-nav'
+import { SettingsMenu } from '@/components/settings-menu'
 import { AuthProvider, useAuth } from '@/hooks/use-auth'
 // Auth-aware nav links
 function AuthNavLinks() {
@@ -209,9 +209,7 @@ function App() {
 
                 {/* Right side */}
                 <div className="flex items-center space-x-4">
-                  <Button variant="ghost" size="sm">
-                    <Settings className="h-4 w-4" />
-                  </Button>
+                  <SettingsMenu />
                   <ModeToggle />
                   <Separator orientation="vertical" className="h-6" />
                   <UserNav />

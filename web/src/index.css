@@ -1,6 +1,36 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Berkeley Mono font faces */
+@font-face {
+  font-family: "Berkeley Mono";
+  src: url("../berkeley-mono-web/TX-02-Z9KPWVL7/BerkeleyMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Berkeley Mono";
+  src: url("../berkeley-mono-web/TX-02-Z9KPWVL7/BerkeleyMono-Oblique.woff2") format("woff2");
+  font-weight: 400;
+  font-style: oblique;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Berkeley Mono";
+  src: url("../berkeley-mono-web/TX-02-Z9KPWVL7/BerkeleyMono-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Berkeley Mono";
+  src: url("../berkeley-mono-web/TX-02-Z9KPWVL7/BerkeleyMono-Bold-Oblique.woff2") format("woff2");
+  font-weight: 700;
+  font-style: oblique;
+  font-display: swap;
+}
+
 :root {
   --background: oklch(0.9730 0.0133 286.1503);
   --foreground: oklch(0.3015 0.0572 282.4176);
@@ -50,6 +80,11 @@
   --spacing: 0.25rem;
 }
 
+/* Default base font uses the configured sans variable */
+html, body {
+  font-family: var(--font-sans);
+}
+
 .dark {
   --background: oklch(0.1743 0.0227 283.7998);
   --foreground: oklch(0.9185 0.0257 285.8834);
@@ -95,6 +130,12 @@
   --shadow-lg: 0px 4px 10px 0px hsl(240 30% 25% / 0.12), 0px 4px 6px -1px hsl(240 30% 25% / 0.12);
   --shadow-xl: 0px 4px 10px 0px hsl(240 30% 25% / 0.12), 0px 8px 10px -1px hsl(240 30% 25% / 0.12);
   --shadow-2xl: 0px 4px 10px 0px hsl(240 30% 25% / 0.30);
+}
+
+/* When this class is present on <html>, switch site font to Berkeley Mono */
+.font-berkeley {
+  --font-sans: "Berkeley Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-mono: "Berkeley Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
 @theme inline {

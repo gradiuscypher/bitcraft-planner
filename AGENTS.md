@@ -110,6 +110,19 @@ Note: The README mentions `/search/*`, but actual code uses `/items/search/*` (f
   - Copy `api/.env.example` to `api/.env` and set secrets/paths.
   - Copy `web/.env.example` to `web/.env.local` and set `VITE_API_BASE_URL`.
 
+## Testing improvements
+- API tests use an in-memory SQLite database when `ENVIRONMENT=test`.
+  - Make sure to run tests with `ENVIRONMENT=test` or let `api/tests/conftest.py` set it.
+  - Example: `cd api && ENVIRONMENT=test uv run pytest -vv`.
+- Useful targets:
+  - `cd api && make test` runs pytest
+  - `cd api && make lint` / `make fmt` for code quality
+- Added sample tests: `api/tests/test_items_endpoints.py` covers `/items/random` and parameter validation.
+- Web tests use Vitest + Testing Library with jsdom:
+  - Run: `cd web && make test` (watch), `make test-ci` (single run), `make coverage`.
+  - Config: `web/vitest.config.ts`, setup: `web/vitest.setup.ts`.
+  - Sample: `web/src/lib/utils.test.ts`.
+
 ## Quick commands
 - **API**:
   - Run: `cd api && make api`
