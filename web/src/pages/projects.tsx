@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { projectsService } from '@/lib/projects-service';
@@ -451,9 +451,8 @@ export function ProjectsPage() {
                 {projects.map((project) => {
                   const expanded = expandedProjectIds.has(project.id);
                   return (
-                    <>
+                    <React.Fragment key={project.id}>
                       <TableRow
-                        key={project.id}
                         className="cursor-pointer hover:bg-accent/60 data-[state=selected]:bg-accent text-foreground"
                         onClick={(e) => handleRowClick(project.id, e)}
                       >
@@ -519,7 +518,7 @@ export function ProjectsPage() {
                         </TableCell>
                       </TableRow>
                       {expanded && (
-                        <TableRow data-no-nav>
+                        <TableRow data-no-nav key={`details-${project.id}`}>
                           <TableCell colSpan={6} className="bg-muted text-foreground">
                             <div className="py-3 px-2 text-sm flex flex-col gap-2">
                               <div className="flex flex-wrap items-center gap-2">
@@ -550,7 +549,7 @@ export function ProjectsPage() {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </TableBody>
