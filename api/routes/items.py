@@ -12,10 +12,9 @@ from models.gamedata import (
     GameItemOrm,
     GameItemRecipeOrm,
     GameItemRecipeProducedOrm,
-    GameItemRecipeConsumedOrm,
     SearchService,
 )
-from models.items import Item, ItemRecipe, ConsumedItem
+from models.items import Item, ItemRecipe
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +28,7 @@ class SearchResult(BaseModel):
     id: int
     type: str | None = None
     tier: int | None = None
+
 
 class SearchResponse(BaseModel):
     results: list[SearchResult]
@@ -184,7 +184,9 @@ async def get_item_recipe(item_id: int) -> list[ItemRecipe]:
     if not item:
         raise HTTPException(status_code=404, detail="Item not found")
 
-    item_recipes_orm: list[GameItemRecipeProducedOrm] = await GameItemRecipeProducedOrm.get_by_item_id(item_id)
+    item_recipes_orm: list[
+        GameItemRecipeProducedOrm
+    ] = await GameItemRecipeProducedOrm.get_by_item_id(item_id)
     if not item_recipes_orm:
         raise HTTPException(status_code=404, detail="Item recipe not found")
 
@@ -226,6 +228,7 @@ async def search_buildings(
         search_type="buildings",
     )
 
+
 @items.get("/search/cargo")
 async def search_cargo(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -255,6 +258,7 @@ async def search_cargo(
         search_type="cargo",
     )
 
+
 @items.get("/search/all")
 async def search_all(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -267,7 +271,9 @@ async def search_all(
 
     # Perform searches across all categories sequentially to avoid session conflicts
     items_results = await search_service.search_items(query, limit, score_cutoff)
-    buildings_results = await search_service.search_buildings(query, limit, score_cutoff)
+    buildings_results = await search_service.search_buildings(
+        query, limit, score_cutoff,
+    )
     cargo_results = await search_service.search_cargo(query, limit, score_cutoff)
 
     # Convert gamedata SearchResult objects to Pydantic SearchResult models
@@ -311,6 +317,7 @@ async def search_all(
         query=query,
     )
 
+
 @items.get("/search/best")
 async def get_best_match_endpoint(
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -319,7 +326,10 @@ async def get_best_match_endpoint(
 ) -> SearchResult | None:
     """Get the single best match across specified search type"""
     if search_type not in ["items", "buildings", "cargo", "all"]:
-        raise HTTPException(status_code=400, detail="search_type must be one of: items, buildings, cargo, all")
+        raise HTTPException(
+            status_code=400,
+            detail="search_type must be one of: items, buildings, cargo, all",
+        )
 
     search_service = SearchService(db)
     best_result = None
@@ -367,10 +377,10 @@ async def calculate_recipe_tree_by_item(
     """
     if depth > max_depth:
         return [], []
-    
+
     # Get all recipes that produce this item
     item_recipes_orm = await GameItemRecipeProducedOrm.get_by_item_id(item_id)
-    
+
     if not item_recipes_orm:
         # This is a base material (no recipe found)
         item_orm = await GameItemOrm.get_by_id(item_id)
@@ -379,10 +389,10 @@ async def calculate_recipe_tree_by_item(
             item_id=item_id,
             item_name=item_name,
             amount=amount,
-            is_base_material=True
+            is_base_material=True,
         )
         return [], [base_material]
-    
+
     # Find the first non-reforging recipe (exclude building type 127749503)
     suitable_recipe_id = None
     for recipe_produced in item_recipes_orm:
@@ -390,7 +400,7 @@ async def calculate_recipe_tree_by_item(
         if recipe_orm and recipe_orm.building_type_requirement != 127749503:
             suitable_recipe_id = recipe_produced.recipe_id
             break
-    
+
     if not suitable_recipe_id:
         # No suitable recipes found, treat as base material
         item_orm = await GameItemOrm.get_by_id(item_id)
@@ -399,10 +409,10 @@ async def calculate_recipe_tree_by_item(
             item_id=item_id,
             item_name=item_name,
             amount=amount,
-            is_base_material=True
+            is_base_material=True,
         )
         return [], [base_material]
-    
+
     # Use the first suitable recipe
     return await calculate_recipe_tree_by_recipe(
         suitable_recipe_id,
@@ -426,49 +436,61 @@ async def calculate_recipe_tree_by_recipe(
     """
     if depth > max_depth:
         return [], []
-    
+
     steps = []
     base_materials = []
     current_step_items = []
-    
+
     # Get the specific recipe
     recipe_orm = await GameItemRecipeOrm.get_by_id(recipe_id)
-    
+
     if not recipe_orm or not recipe_orm.consumed_items:
         # No consumed items means this recipe produces base materials
         # Find what this recipe produces
         if recipe_orm and recipe_orm.produced_items:
             for produced_item in recipe_orm.produced_items:
                 item_orm = await GameItemOrm.get_by_id(produced_item.item_id)
-                item_name = item_orm.name if item_orm else f"Unknown Item {produced_item.item_id}"
+                item_name = (
+                    item_orm.name
+                    if item_orm
+                    else f"Unknown Item {produced_item.item_id}"
+                )
                 base_material = RecipeTreeItem(
                     item_id=produced_item.item_id,
                     item_name=item_name,
                     amount=amount,
-                    is_base_material=True
+                    is_base_material=True,
                 )
                 base_materials.append(base_material)
         return [], base_materials
-    
+
     # Calculate how many times we need to run this recipe
     # Find the main produced item (first one, or could be specified)
-    main_produced_item = recipe_orm.produced_items[0] if recipe_orm.produced_items else None
+    main_produced_item = (
+        recipe_orm.produced_items[0] if recipe_orm.produced_items else None
+    )
     produced_amount = main_produced_item.amount if main_produced_item else 1
     recipe_runs = (amount + produced_amount - 1) // produced_amount  # Ceiling division
-    
+
     # Process each consumed item
     for consumed_item in recipe_orm.consumed_items:
         consumed_item_orm = await GameItemOrm.get_by_id(consumed_item.item_id)
-        consumed_item_name = consumed_item_orm.name if consumed_item_orm else f"Unknown Item {consumed_item.item_id}"
-        
+        consumed_item_name = (
+            consumed_item_orm.name
+            if consumed_item_orm
+            else f"Unknown Item {consumed_item.item_id}"
+        )
+
         total_needed = consumed_item.amount * recipe_runs
-        
-        current_step_items.append(RecipeTreeItem(
-            item_id=consumed_item.item_id,
-            item_name=consumed_item_name,
-            amount=total_needed
-        ))
-        
+
+        current_step_items.append(
+            RecipeTreeItem(
+                item_id=consumed_item.item_id,
+                item_name=consumed_item_name,
+                amount=total_needed,
+            ),
+        )
+
         if not first_level_only:
             # Recursively get materials for this consumed item (use first available recipe)
             sub_steps, sub_base_materials = await calculate_recipe_tree_by_item(
@@ -479,39 +501,44 @@ async def calculate_recipe_tree_by_recipe(
                 first_level_only=first_level_only,
             )
             steps.extend(sub_steps)
-            
+
             # Merge base materials (sum amounts for same items)
             for sub_base in sub_base_materials:
-                existing = next((bm for bm in base_materials if bm.item_id == sub_base.item_id), None)
+                existing = next(
+                    (bm for bm in base_materials if bm.item_id == sub_base.item_id),
+                    None,
+                )
                 if existing:
                     existing.amount += sub_base.amount
                 else:
                     base_materials.append(sub_base)
-    
+
     # Add current step if we have items
     if current_step_items:
         steps.insert(0, RecipeTreeStep(depth=depth, items=current_step_items))
         if first_level_only:
             # For first-level only, treat direct consumed items as the "base" list
             return steps, list(current_step_items)
-    
+
     return steps, base_materials
 
 
 @items.get("/{item_id}/recipe-tree")
-async def get_item_recipe_tree(item_id: int, amount: int = 1, first_level_only: bool = False) -> RecipeTreeResponse:
+async def get_item_recipe_tree(
+    item_id: int, amount: int = 1, first_level_only: bool = False,
+) -> RecipeTreeResponse:
     """Get complete recipe tree for an item using its first available non-reforging recipe"""
-    
+
     # Verify item exists
     item_orm = await GameItemOrm.get_by_id(item_id)
     if not item_orm:
         raise HTTPException(status_code=404, detail="Item not found")
-    
+
     # Get all recipes for this item
     item_recipes_orm = await GameItemRecipeProducedOrm.get_by_item_id(item_id)
     if not item_recipes_orm:
         raise HTTPException(status_code=404, detail="No recipe found for this item")
-    
+
     # Find the first non-reforging recipe (exclude building type 127749503)
     suitable_recipe_id = None
     for recipe_produced in item_recipes_orm:
@@ -519,54 +546,61 @@ async def get_item_recipe_tree(item_id: int, amount: int = 1, first_level_only: 
         if recipe_orm and recipe_orm.building_type_requirement != 127749503:
             suitable_recipe_id = recipe_produced.recipe_id
             break
-    
+
     if not suitable_recipe_id:
-        raise HTTPException(status_code=404, detail="No suitable crafting recipe found for this item (only reforging recipes available)")
-    
+        raise HTTPException(
+            status_code=404,
+            detail="No suitable crafting recipe found for this item (only reforging recipes available)",
+        )
+
     # Calculate the recipe tree
     steps, base_materials = await calculate_recipe_tree_by_recipe(
         suitable_recipe_id,
         amount,
         first_level_only=first_level_only,
     )
-    
+
     return RecipeTreeResponse(
         recipe_id=suitable_recipe_id,
         item_id=item_id,
         item_name=item_orm.name,
         steps=steps,
-        base_materials=base_materials
+        base_materials=base_materials,
     )
 
 
 @items.get("/recipe/{recipe_id}/recipe-tree")
-async def get_recipe_tree(recipe_id: int, amount: int = 1, first_level_only: bool = False) -> RecipeTreeResponse:
+async def get_recipe_tree(
+    recipe_id: int, amount: int = 1, first_level_only: bool = False,
+) -> RecipeTreeResponse:
     """Get complete recipe tree for a specific recipe ID"""
-    
+
     # Verify recipe exists
     recipe_orm = await GameItemRecipeOrm.get_by_id(recipe_id)
     if not recipe_orm:
         raise HTTPException(status_code=404, detail="Recipe not found")
-    
+
     # Get the main item this recipe produces
     if not recipe_orm.produced_items:
         raise HTTPException(status_code=400, detail="Recipe produces no items")
-    
+
     main_produced_item = recipe_orm.produced_items[0]
     item_orm = await GameItemOrm.get_by_id(main_produced_item.item_id)
-    item_name = item_orm.name if item_orm else f"Unknown Item {main_produced_item.item_id}"
-    
+    item_name = (
+        item_orm.name if item_orm else f"Unknown Item {main_produced_item.item_id}"
+    )
+
     # Calculate the recipe tree
     steps, base_materials = await calculate_recipe_tree_by_recipe(
         recipe_id,
         amount,
         first_level_only=first_level_only,
     )
-    
+
     return RecipeTreeResponse(
         recipe_id=recipe_id,
         item_id=main_produced_item.item_id,
         item_name=item_name,
         steps=steps,
-        base_materials=base_materials
+        base_materials=base_materials,
     )

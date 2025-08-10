@@ -32,7 +32,9 @@ class GameItemRecipeConsumedOrm(Base):
     __tablename__ = "game_item_recipe_consumed"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     item_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_item_recipes.id"), nullable=False)
+    recipe_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("game_item_recipes.id"), nullable=False,
+    )
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
@@ -40,7 +42,9 @@ class GameItemRecipeProducedOrm(Base):
     __tablename__ = "game_item_recipe_produced"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     item_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_item_recipes.id"), nullable=False)
+    recipe_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("game_item_recipes.id"), nullable=False,
+    )
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
 
     @classmethod
@@ -58,8 +62,12 @@ class GameItemRecipeOrm(Base):
     actions_required: Mapped[int] = mapped_column(Integer, nullable=False)
     building_tier_requirement: Mapped[int] = mapped_column(Integer, nullable=False)
     building_type_requirement: Mapped[int] = mapped_column(Integer, nullable=False)
-    consumed_items: Mapped[list["GameItemRecipeConsumedOrm"]] = relationship("GameItemRecipeConsumedOrm", cascade="all, delete-orphan")
-    produced_items: Mapped[list["GameItemRecipeProducedOrm"]] = relationship("GameItemRecipeProducedOrm", cascade="all, delete-orphan")
+    consumed_items: Mapped[list["GameItemRecipeConsumedOrm"]] = relationship(
+        "GameItemRecipeConsumedOrm", cascade="all, delete-orphan",
+    )
+    produced_items: Mapped[list["GameItemRecipeProducedOrm"]] = relationship(
+        "GameItemRecipeProducedOrm", cascade="all, delete-orphan",
+    )
     stamina_requirement: Mapped[float] = mapped_column(Float, nullable=False)
     time_requirement: Mapped[float] = mapped_column(Float, nullable=False)
     tool_tier_requirement: Mapped[int | None] = mapped_column(Integer)
@@ -118,7 +126,9 @@ class GameBuildingTypeOrm(Base):
 class GameBuildingRecipeLevelRequirementOrm(Base):
     __tablename__ = "game_building_recipe_level_requirements"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    building_recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_building_recipes.id"), nullable=False)
+    building_recipe_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("game_building_recipes.id"), nullable=False,
+    )
     level: Mapped[int] = mapped_column(Integer, nullable=False)
     skill_id: Mapped[int] = mapped_column(Integer, nullable=False)
 
@@ -126,7 +136,9 @@ class GameBuildingRecipeLevelRequirementOrm(Base):
 class GameBuildingRecipeToolRequirementOrm(Base):
     __tablename__ = "game_building_recipe_tool_requirements"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    building_recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_building_recipes.id"), nullable=False)
+    building_recipe_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("game_building_recipes.id"), nullable=False,
+    )
     tool_id: Mapped[int] = mapped_column(Integer, nullable=False)
     tool_tier: Mapped[int] = mapped_column(Integer, nullable=False)
 
@@ -134,7 +146,9 @@ class GameBuildingRecipeToolRequirementOrm(Base):
 class GameBuildingRecipeConsumedItemOrm(Base):
     __tablename__ = "game_building_recipe_consumed_items"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    building_recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_building_recipes.id"), nullable=False)
+    building_recipe_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("game_building_recipes.id"), nullable=False,
+    )
     item_id: Mapped[int] = mapped_column(Integer, nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
 
@@ -142,7 +156,9 @@ class GameBuildingRecipeConsumedItemOrm(Base):
 class GameBuildingRecipeConsumedCargoOrm(Base):
     __tablename__ = "game_building_recipe_consumed_cargos"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    building_recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_building_recipes.id"), nullable=False)
+    building_recipe_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("game_building_recipes.id"), nullable=False,
+    )
     cargo_id: Mapped[int] = mapped_column(Integer, nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
 
@@ -150,9 +166,12 @@ class GameBuildingRecipeConsumedCargoOrm(Base):
 class GameBuildingExperiencePerProgressOrm(Base):
     __tablename__ = "game_building_recipe_experience_per_progress"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    building_recipe_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_building_recipes.id"), nullable=False)
+    building_recipe_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("game_building_recipes.id"), nullable=False,
+    )
     skill_id: Mapped[int] = mapped_column(Integer, nullable=False)
     experience: Mapped[float] = mapped_column(Float, nullable=False)
+
 
 class GameBuildingRecipeOrm(Base):
     __tablename__ = "game_building_recipes"
@@ -162,11 +181,27 @@ class GameBuildingRecipeOrm(Base):
     stamina_requirement: Mapped[float] = mapped_column(Float, nullable=False)
     consumed_building: Mapped[int] = mapped_column(Integer, nullable=False)
     required_interior_tier: Mapped[int] = mapped_column(Integer, nullable=False)
-    level_requirements: Mapped[list["GameBuildingRecipeLevelRequirementOrm"]] = relationship("GameBuildingRecipeLevelRequirementOrm", cascade="all, delete-orphan")
-    tool_requirements: Mapped[list["GameBuildingRecipeToolRequirementOrm"]] = relationship("GameBuildingRecipeToolRequirementOrm", cascade="all, delete-orphan")
-    consumed_item_stacks: Mapped[list["GameBuildingRecipeConsumedItemOrm"]] = relationship("GameBuildingRecipeConsumedItemOrm", cascade="all, delete-orphan")
-    consumed_cargo_stacks: Mapped[list["GameBuildingRecipeConsumedCargoOrm"]] = relationship("GameBuildingRecipeConsumedCargoOrm", cascade="all, delete-orphan")
-    experience_per_progress: Mapped[list["GameBuildingExperiencePerProgressOrm"]] = relationship("GameBuildingExperiencePerProgressOrm", cascade="all, delete-orphan")
+    level_requirements: Mapped[list["GameBuildingRecipeLevelRequirementOrm"]] = (
+        relationship(
+            "GameBuildingRecipeLevelRequirementOrm", cascade="all, delete-orphan",
+        )
+    )
+    tool_requirements: Mapped[list["GameBuildingRecipeToolRequirementOrm"]] = (
+        relationship(
+            "GameBuildingRecipeToolRequirementOrm", cascade="all, delete-orphan",
+        )
+    )
+    consumed_item_stacks: Mapped[list["GameBuildingRecipeConsumedItemOrm"]] = (
+        relationship("GameBuildingRecipeConsumedItemOrm", cascade="all, delete-orphan")
+    )
+    consumed_cargo_stacks: Mapped[list["GameBuildingRecipeConsumedCargoOrm"]] = (
+        relationship("GameBuildingRecipeConsumedCargoOrm", cascade="all, delete-orphan")
+    )
+    experience_per_progress: Mapped[list["GameBuildingExperiencePerProgressOrm"]] = (
+        relationship(
+            "GameBuildingExperiencePerProgressOrm", cascade="all, delete-orphan",
+        )
+    )
     consumed_shards: Mapped[int] = mapped_column(Integer, nullable=False)
     required_claim_tech_id: Mapped[int] = mapped_column(Integer, nullable=False)
     full_discovery_score: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -186,11 +221,18 @@ class GameBuildingRecipeOrm(Base):
 
 
 class SearchResult:
-    def __init__(self, name: str, score: float, id: int, type: str, tier: int | None = None) -> None:
+    def __init__(
+        self,
+        name: str,
+        score: float,
+        search_id: int,
+        search_type: str,
+        tier: int | None = None,
+    ) -> None:
         self.name = name
         self.score = score
-        self.id = id
-        self.type = type
+        self.search_id = search_id
+        self.search_type = search_type
         self.tier = tier
 
 
@@ -198,7 +240,9 @@ class SearchService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    async def search_items(self, query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[SearchResult]:
+    async def search_items(
+        self, query: str, limit: int = 5, score_cutoff: float = 60.0,
+    ) -> list[SearchResult]:
         """Search items using SQLite FTS5 + fuzzy matching"""
 
         fts_results = []
@@ -245,7 +289,9 @@ class SearchService:
             )
             all_items = all_items_result.fetchall()
 
-            item_names = {item.name: (item.id, item.item_id, item.tier) for item in all_items}
+            item_names = {
+                item.name: (item.id, item.item_id, item.tier) for item in all_items
+            }
             fuzzy_results = process.extract(
                 query,
                 item_names.keys(),
@@ -264,26 +310,30 @@ class SearchService:
                     # Convert bm25 score (negative, lower is better) to positive score (higher is better)
                     # bm25 scores are typically between -10 and 0, so we transform them to 0-100 range
                     normalized_score = max(0, 100 + (row.rank_score or -10))
-                    combined_results.append(SearchResult(
-                        name=row.name,
-                        score=normalized_score,
-                        id=row.item_id,
-                        type="item",
-                        tier=row.tier,
-                    ))
+                    combined_results.append(
+                        SearchResult(
+                            name=row.name,
+                            score=normalized_score,
+                            id=row.item_id,
+                            type="item",
+                            tier=row.tier,
+                        ),
+                    )
                     seen_ids.add(row.id)
 
             # Add fuzzy results
             for name, score, _ in fuzzy_results:
                 item_id, db_item_id, item_tier = item_names[name]
                 if item_id not in seen_ids:
-                    combined_results.append(SearchResult(
-                        name=name,
-                        score=score,
-                        id=db_item_id,
-                        type="item",
-                        tier=item_tier,
-                    ))
+                    combined_results.append(
+                        SearchResult(
+                            name=name,
+                            score=score,
+                            id=db_item_id,
+                            type="item",
+                            tier=item_tier,
+                        ),
+                    )
                     seen_ids.add(item_id)
 
             return combined_results[:limit]
@@ -300,7 +350,9 @@ class SearchService:
             for row in fts_results[:limit]
         ]
 
-    async def search_buildings(self, query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[SearchResult]:
+    async def search_buildings(
+        self, query: str, limit: int = 5, score_cutoff: float = 60.0,
+    ) -> list[SearchResult]:
         """Search for buildings using hybrid FTS + fuzzy matching"""
         fts_results = []
 
@@ -346,7 +398,10 @@ class SearchService:
             )
             all_buildings = all_buildings_result.fetchall()
 
-            building_names = {building.name: (building.id, building.building_id) for building in all_buildings}
+            building_names = {
+                building.name: (building.id, building.building_id)
+                for building in all_buildings
+            }
             fuzzy_results = process.extract(
                 query,
                 building_names.keys(),
@@ -364,26 +419,30 @@ class SearchService:
                 if row.id not in seen_ids:
                     # Convert bm25 score (negative, lower is better) to positive score (higher is better)
                     normalized_score = max(0, 100 + (row.rank_score or -10))
-                    combined_results.append(SearchResult(
-                        name=row.name,
-                        score=normalized_score,
-                        id=row.building_id,
-                        type="building",
-                        tier=None,
-                    ))
+                    combined_results.append(
+                        SearchResult(
+                            name=row.name,
+                            score=normalized_score,
+                            id=row.building_id,
+                            type="building",
+                            tier=None,
+                        ),
+                    )
                     seen_ids.add(row.id)
 
             # Add fuzzy results
             for name, score, _ in fuzzy_results:
                 building_id, db_building_id = building_names[name]
                 if building_id not in seen_ids:
-                    combined_results.append(SearchResult(
-                        name=name,
-                        score=score,
-                        id=db_building_id,
-                        type="building",
-                        tier=None,
-                    ))
+                    combined_results.append(
+                        SearchResult(
+                            name=name,
+                            score=score,
+                            id=db_building_id,
+                            type="building",
+                            tier=None,
+                        ),
+                    )
                     seen_ids.add(building_id)
 
             return combined_results[:limit]
@@ -400,7 +459,9 @@ class SearchService:
             for row in fts_results[:limit]
         ]
 
-    async def search_cargo(self, query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[SearchResult]:
+    async def search_cargo(
+        self, query: str, limit: int = 5, score_cutoff: float = 60.0,
+    ) -> list[SearchResult]:
         """Search for cargo using hybrid FTS + fuzzy matching"""
         fts_results = []
 
@@ -446,7 +507,10 @@ class SearchService:
             )
             all_cargo = all_cargo_result.fetchall()
 
-            cargo_names = {cargo.name: (cargo.id, cargo.cargo_id, cargo.tier) for cargo in all_cargo}
+            cargo_names = {
+                cargo.name: (cargo.id, cargo.cargo_id, cargo.tier)
+                for cargo in all_cargo
+            }
             fuzzy_results = process.extract(
                 query,
                 cargo_names.keys(),
@@ -464,26 +528,30 @@ class SearchService:
                 if row.id not in seen_ids:
                     # Convert bm25 score (negative, lower is better) to positive score (higher is better)
                     normalized_score = max(0, 100 + (row.rank_score or -10))
-                    combined_results.append(SearchResult(
-                        name=row.name,
-                        score=normalized_score,
-                        id=row.cargo_id,
-                        type="cargo",
-                        tier=row.tier,
-                    ))
+                    combined_results.append(
+                        SearchResult(
+                            name=row.name,
+                            score=normalized_score,
+                            id=row.cargo_id,
+                            type="cargo",
+                            tier=row.tier,
+                        ),
+                    )
                     seen_ids.add(row.id)
 
             # Add fuzzy results
             for name, score, _ in fuzzy_results:
                 cargo_id, db_cargo_id, cargo_tier = cargo_names[name]
                 if cargo_id not in seen_ids:
-                    combined_results.append(SearchResult(
-                        name=name,
-                        score=score,
-                        id=db_cargo_id,
-                        type="cargo",
-                        tier=cargo_tier,
-                    ))
+                    combined_results.append(
+                        SearchResult(
+                            name=name,
+                            score=score,
+                            id=db_cargo_id,
+                            type="cargo",
+                            tier=cargo_tier,
+                        ),
+                    )
                     seen_ids.add(cargo_id)
 
             return combined_results[:limit]
@@ -548,7 +616,9 @@ async def init_game_data() -> None:
                     tool_requirement = recipe.get("tool_requirement", None)
                     if building_requirement:
                         building_tier_requirement = building_requirement[1]["tier"]
-                        building_type_requirement = building_requirement[1]["building_type"]
+                        building_type_requirement = building_requirement[1][
+                            "building_type"
+                        ]
                     else:
                         building_tier_requirement = None
                         building_type_requirement = None
@@ -597,11 +667,9 @@ async def init_game_data() -> None:
             db.add(item_orm)
         await db.commit()
 
-
     # fill out the building data
     async with SessionLocal() as db:
         for building_id, building_obj in building_types.items():
-
             building_orm = GameBuildingTypeOrm(
                 building_id=building_id,
                 name=building_obj["name"],
@@ -613,38 +681,53 @@ async def init_game_data() -> None:
             # Handle level requirements (only if they exist)
             level_requirements = []
             if building_recipe_obj["level_requirements"]:
-                level_requirements = [GameBuildingRecipeLevelRequirementOrm(
-                    building_recipe_id=building_recipe_id,
-                    level=building_recipe_obj["level_requirements"][0][0],
-                    skill_id=building_recipe_obj["level_requirements"][0][1],
-                )]
+                level_requirements = [
+                    GameBuildingRecipeLevelRequirementOrm(
+                        building_recipe_id=building_recipe_id,
+                        level=building_recipe_obj["level_requirements"][0][0],
+                        skill_id=building_recipe_obj["level_requirements"][0][1],
+                    ),
+                ]
 
             # Handle tool requirements (only if they exist)
             tool_requirements = []
             if building_recipe_obj["tool_requirements"]:
-                tool_requirements = [GameBuildingRecipeToolRequirementOrm(
+                tool_requirements = [
+                    GameBuildingRecipeToolRequirementOrm(
+                        building_recipe_id=building_recipe_id,
+                        tool_id=building_recipe_obj["tool_requirements"][0][0],
+                        tool_tier=building_recipe_obj["tool_requirements"][0][1],
+                    ),
+                ]
+
+            consumed_item_stacks = [
+                GameBuildingRecipeConsumedItemOrm(
                     building_recipe_id=building_recipe_id,
-                    tool_id=building_recipe_obj["tool_requirements"][0][0],
-                    tool_tier=building_recipe_obj["tool_requirements"][0][1],
-                )]
+                    item_id=consumed_item[0],
+                    amount=consumed_item[1],
+                )
+                for consumed_item in building_recipe_obj["consumed_item_stacks"]
+            ]
 
-            consumed_item_stacks = [GameBuildingRecipeConsumedItemOrm(
-                building_recipe_id=building_recipe_id,
-                item_id=consumed_item[0],
-                amount=consumed_item[1],
-            ) for consumed_item in building_recipe_obj["consumed_item_stacks"]]
+            consumed_cargo_stacks = [
+                GameBuildingRecipeConsumedCargoOrm(
+                    building_recipe_id=building_recipe_id,
+                    cargo_id=consumed_cargo[0],
+                    amount=consumed_cargo[1],
+                )
+                for consumed_cargo in building_recipe_obj["consumed_cargo_stacks"]
+            ]
 
-            consumed_cargo_stacks = [GameBuildingRecipeConsumedCargoOrm(
-                building_recipe_id=building_recipe_id,
-                cargo_id=consumed_cargo[0],
-                amount=consumed_cargo[1],
-            ) for consumed_cargo in building_recipe_obj["consumed_cargo_stacks"]]
-
-            experience_per_progress = [GameBuildingExperiencePerProgressOrm(
-                building_recipe_id=building_recipe_id,
-                skill_id=experience_per_progress[0],
-                experience=experience_per_progress[1],
-            ) for experience_per_progress in building_recipe_obj["experience_per_progress"]]
+            experience_per_progress = [
+                GameBuildingExperiencePerProgressOrm(
+                    building_recipe_id=building_recipe_id,
+                    skill_id=experience_per_progress[0],
+                    experience=experience_per_progress[1],
+                )
+                for experience_per_progress in building_recipe_obj[
+                    "experience_per_progress"
+                ]
+            ]
 
             building_recipe_orm = GameBuildingRecipeOrm(
                 id=building_recipe_id,
@@ -677,6 +760,7 @@ async def create_fts_tables() -> None:
     from sqlalchemy import text  # noqa: PLC0415
 
     from database import engine  # noqa: PLC0415
+
     async with engine.begin() as conn:
         # Drop existing FTS tables if they exist
         await conn.execute(text("DROP TABLE IF EXISTS items_fts"))
@@ -684,47 +768,59 @@ async def create_fts_tables() -> None:
         await conn.execute(text("DROP TABLE IF EXISTS cargo_fts"))
 
         # Create FTS table for items
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             CREATE VIRTUAL TABLE items_fts USING fts5(
                 name, description, tag,
                 content='game_items',
                 content_rowid='id'
             )
-        """))
+        """),
+        )
 
         # Create FTS table for buildings
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             CREATE VIRTUAL TABLE buildings_fts USING fts5(
                 name,
                 content='game_building_types',
                 content_rowid='id'
             )
-        """))
+        """),
+        )
 
         # Create FTS table for cargo
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             CREATE VIRTUAL TABLE cargo_fts USING fts5(
                 name, description, tag,
                 content='game_cargos',
                 content_rowid='id'
             )
-        """))
+        """),
+        )
 
         # Populate FTS tables
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             INSERT INTO items_fts(rowid, name, description, tag)
             SELECT id, name, description, tag FROM game_items
-        """))
+        """),
+        )
 
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             INSERT INTO buildings_fts(rowid, name)
             SELECT id, name FROM game_building_types
-        """))
+        """),
+        )
 
-        await conn.execute(text("""
+        await conn.execute(
+            text("""
             INSERT INTO cargo_fts(rowid, name, description, tag)
             SELECT id, name, description, tag FROM game_cargos
-        """))
+        """),
+        )
 
         # Commit the changes
         await conn.commit()

@@ -38,8 +38,8 @@ def load_building_descriptions() -> dict[int, Any]:
             building_by_id[b["id"]] = b
         return building_by_id
 
-def load_building_types() -> dict[int, Any]:
 
+def load_building_types() -> dict[int, Any]:
     with open(BUILDING_TYPES_FILE) as f:
         building_types = json.load(f)
         building_types_by_id: dict[str, Any] = {}
@@ -99,6 +99,7 @@ def load_skill_descriptions() -> dict[int, Any]:
             skill_by_id[skill_obj["id"]] = skill_obj
     return skill_by_id
 
+
 def load_tool_descriptions() -> dict[int, Any]:
     tool_by_id: dict[int, Any] = {}
     with open(TOOL_DESCRIPTIONS_FILE) as f:
@@ -131,7 +132,9 @@ def calculate_building_needs(building_name: str) -> None:
         print(f"{stack_name}: {stack_count}")
 
 
-def fuzzy_search_items(query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[tuple[str, float, int]]:
+def fuzzy_search_items(
+    query: str, limit: int = 5, score_cutoff: float = 60.0,
+) -> list[tuple[str, float, int]]:
     """
     Perform fuzzy search on item names.
     Args:
@@ -144,7 +147,9 @@ def fuzzy_search_items(query: str, limit: int = 5, score_cutoff: float = 60.0) -
     item_by_name, item_by_id = load_item_descriptions()
 
     # Create a mapping of item names to their IDs
-    item_names = {item_data["name"]: item_id for item_id, item_data in item_by_id.items()}
+    item_names = {
+        item_data["name"]: item_id for item_id, item_data in item_by_id.items()
+    }
 
     # Perform fuzzy matching
     results = process.extract(
@@ -159,7 +164,9 @@ def fuzzy_search_items(query: str, limit: int = 5, score_cutoff: float = 60.0) -
     return [(name, score, item_names[name]) for name, score, _ in results]
 
 
-def fuzzy_search_buildings(query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[tuple[str, float, int]]:
+def fuzzy_search_buildings(
+    query: str, limit: int = 5, score_cutoff: float = 60.0,
+) -> list[tuple[str, float, int]]:
     """
     Perform fuzzy search on building names.
     Args_:
@@ -172,7 +179,10 @@ def fuzzy_search_buildings(query: str, limit: int = 5, score_cutoff: float = 60.
     buildings_by_name, _ = load_building_recipes()
 
     # Create a mapping of building names to their IDs
-    building_names = {building_data["name"]: building_data["id"] for building_data in buildings_by_name.values()}
+    building_names = {
+        building_data["name"]: building_data["id"]
+        for building_data in buildings_by_name.values()
+    }
 
     # Perform fuzzy matching
     results = process.extract(
@@ -187,7 +197,9 @@ def fuzzy_search_buildings(query: str, limit: int = 5, score_cutoff: float = 60.
     return [(name, score, building_names[name]) for name, score, _ in results]
 
 
-def fuzzy_search_cargo(query: str, limit: int = 5, score_cutoff: float = 60.0) -> list[tuple[str, float, int]]:
+def fuzzy_search_cargo(
+    query: str, limit: int = 5, score_cutoff: float = 60.0,
+) -> list[tuple[str, float, int]]:
     """
     Perform fuzzy search on cargo names.
     Args:
@@ -200,7 +212,9 @@ def fuzzy_search_cargo(query: str, limit: int = 5, score_cutoff: float = 60.0) -
     cargo_by_name, cargo_by_id = load_cargo_descriptions()
 
     # Create a mapping of cargo names to their IDs
-    cargo_names = {cargo_data["name"]: cargo_id for cargo_id, cargo_data in cargo_by_id.items()}
+    cargo_names = {
+        cargo_data["name"]: cargo_id for cargo_id, cargo_data in cargo_by_id.items()
+    }
 
     # Perform fuzzy matching
     results = process.extract(
@@ -215,7 +229,9 @@ def fuzzy_search_cargo(query: str, limit: int = 5, score_cutoff: float = 60.0) -
     return [(name, score, cargo_names[name]) for name, score, _ in results]
 
 
-def fuzzy_search_all(query: str, limit: int = 5, score_cutoff: float = 60.0) -> dict[str, list[tuple[str, float, int]]]:
+def fuzzy_search_all(
+    query: str, limit: int = 5, score_cutoff: float = 60.0,
+) -> dict[str, list[tuple[str, float, int]]]:
     """
     Perform fuzzy search across all categories (items, buildings, cargo).
     Args:
@@ -232,7 +248,9 @@ def fuzzy_search_all(query: str, limit: int = 5, score_cutoff: float = 60.0) -> 
     }
 
 
-def get_best_match(query: str, search_type: str = "all") -> tuple[str, float, int, str] | None:
+def get_best_match(
+    query: str, search_type: str = "all",
+) -> tuple[str, float, int, str] | None:
     """
     Get the single best match across specified search type.
     Args:

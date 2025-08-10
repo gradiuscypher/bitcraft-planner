@@ -55,6 +55,7 @@ TEST_USER_2_DATA = {
 
 class MockUser:
     """Mock user object that mimics the User model for testing."""
+
     def __init__(self, user_data: dict):
         self.id = user_data.get("id", 1)  # Default ID for mock
         self.discord_id = user_data["discord_id"]
@@ -110,6 +111,7 @@ def mock_user_2():
 @pytest.fixture
 def authenticated_client(mock_user):
     """Create a test client with mocked authentication."""
+
     def mock_get_current_user():
         return mock_user
 
@@ -123,6 +125,7 @@ def authenticated_client(mock_user):
 @pytest.fixture
 def authenticated_client_2(mock_user_2):
     """Create a test client with mocked authentication for second user."""
+
     def mock_get_current_user():
         return mock_user_2
 
@@ -143,14 +146,18 @@ def auth_headers():
 def pytest_configure(config):
     """Configure pytest markers."""
     config.addinivalue_line(
-        "markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+        "markers",
+        "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     )
     config.addinivalue_line(
-        "markers", "integration: marks tests as integration tests",
+        "markers",
+        "integration: marks tests as integration tests",
     )
     config.addinivalue_line(
-        "markers", "unit: marks tests as unit tests",
+        "markers",
+        "unit: marks tests as unit tests",
     )
     config.addinivalue_line(
-        "markers", "auth: marks tests that require authentication",
+        "markers",
+        "auth: marks tests that require authentication",
     )

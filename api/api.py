@@ -36,10 +36,12 @@ app = FastAPI(
     version="1.0.0",
 )
 
+
 # ref: https://github.com/tiangolo/fastapi/discussions/6678
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
-    request: Request, exc: RequestValidationError,
+    request: Request,
+    exc: RequestValidationError,
 ) -> JSONResponse:
     exc_str = f"{exc}".replace("\n", " ").replace("   ", " ")
 
@@ -62,7 +64,8 @@ async def validation_exception_handler(
         "data": None,
     }
     return JSONResponse(
-        content=content, status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=content,
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
     )
 
 
@@ -95,6 +98,7 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
 # Configure CORS based on environment
 if ENVIRONMENT == EnvironmentEnum.PROD:
     import logfire
+
     logfire.configure(token=LOGFIRE_TOKEN, environment=ENVIRONMENT.value)
     logfire.instrument_fastapi(app)
     # In production, use restricted CORS settings
@@ -102,7 +106,7 @@ if ENVIRONMENT == EnvironmentEnum.PROD:
         CORSMiddleware,
         allow_origins=[
             "https://bitcraft.derp.tools",  # Production domain
-            "http://bitcraft.derp.tools",   # Production domain (HTTP)
+            "http://bitcraft.derp.tools",  # Production domain (HTTP)
         ],
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE"],
@@ -130,4 +134,5 @@ app.include_router(projects)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, port=8000)

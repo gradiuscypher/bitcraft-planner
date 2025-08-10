@@ -39,26 +39,30 @@ from routes.auth import get_current_user
 
 projects = APIRouter(prefix="/projects", tags=["projects"])
 
+
 # Regular project endpoints
 @projects.get("/")
-async def get_projects(current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> list[Project]:
+async def get_projects(
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[Project]:
     # Get groups where user is a member
     member_group_ids = [group.id for group in current_user.groups]
-    
+
     # Get groups where user is the owner (query directly from DB to avoid lazy loading issues)
     owned_groups_result = await db.execute(
-        select(UserGroupOrm.id).where(UserGroupOrm.owner_id == current_user.id)
+        select(UserGroupOrm.id).where(UserGroupOrm.owner_id == current_user.id),
     )
     owned_group_ids = [row[0] for row in owned_groups_result.fetchall()]
-    
+
     # Combine both lists
     all_group_ids = list(set(member_group_ids + owned_group_ids))
-    
+
     # Build the query conditions
     conditions = [ProjectOrm.owner_id == current_user.id]
     if all_group_ids:  # Only add group condition if user has groups
         conditions.append(ProjectOrm.group_id.in_(all_group_ids))
-    
+
     result = await db.execute(
         select(ProjectOrm)
         .where(or_(*conditions))
@@ -69,7 +73,11 @@ async def get_projects(current_user: Annotated[UserOrm, Depends(get_current_user
 
 
 @projects.get("/{project_id}")
-async def get_project(project_id: int, current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> Project:
+async def get_project(
+    project_id: int,
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Project:
     result = await db.execute(
         select(ProjectOrm)
         .where(ProjectOrm.id == project_id)
@@ -83,13 +91,19 @@ async def get_project(project_id: int, current_user: Annotated[UserOrm, Depends(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     if not project.does_user_have_access(current_user.id):
-        raise HTTPException(status_code=403, detail="You do not have access to this project")
+        raise HTTPException(
+            status_code=403, detail="You do not have access to this project",
+        )
 
     return Project.model_validate(project)
 
 
 @projects.post("/")
-async def create_project(project: CreateProjectRequest, current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> Project:
+async def create_project(
+    project: CreateProjectRequest,
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Project:
     # If user is trying to create a project for a group, validate they have permission
     if project.group_id is not None:
         result = await db.execute(
@@ -103,7 +117,10 @@ async def create_project(project: CreateProjectRequest, current_user: Annotated[
             raise HTTPException(status_code=404, detail="Group not found")
 
         if not group.is_user_owner_or_co_owner(current_user.id):
-            raise HTTPException(status_code=403, detail="You can only create projects for groups you own or co-own")
+            raise HTTPException(
+                status_code=403,
+                detail="You can only create projects for groups you own or co-own",
+            )
 
     project_orm = ProjectOrm(
         name=project.name,
@@ -125,17 +142,26 @@ async def create_project(project: CreateProjectRequest, current_user: Annotated[
 
 
 @projects.put("/{project_id}")
-async def update_project(project_id: int, project: CreateProjectRequest, current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> Project:
+async def update_project(
+    project_id: int,
+    project: CreateProjectRequest,
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Project:
     result = await db.execute(
         select(ProjectOrm)
         .where(ProjectOrm.id == project_id)
-        .options(selectinload(ProjectOrm.group).selectinload(UserGroupOrm.user_memberships)),
+        .options(
+            selectinload(ProjectOrm.group).selectinload(UserGroupOrm.user_memberships),
+        ),
     )
     project_orm = result.scalar_one_or_none()
     if not project_orm:
         raise HTTPException(status_code=404, detail="Project not found")
     if not project_orm.can_user_modify(current_user.id):
-        raise HTTPException(status_code=403, detail="You do not have permission to modify this project")
+        raise HTTPException(
+            status_code=403, detail="You do not have permission to modify this project",
+        )
     project_orm.name = project.name
     await db.commit()
 
@@ -150,33 +176,50 @@ async def update_project(project_id: int, project: CreateProjectRequest, current
 
 
 @projects.delete("/{project_id}")
-async def delete_project(project_id: int, current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> None:
+async def delete_project(
+    project_id: int,
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> None:
     result = await db.execute(
         select(ProjectOrm)
         .where(ProjectOrm.id == project_id)
-        .options(selectinload(ProjectOrm.group).selectinload(UserGroupOrm.user_memberships)),
+        .options(
+            selectinload(ProjectOrm.group).selectinload(UserGroupOrm.user_memberships),
+        ),
     )
     project_orm = result.scalar_one_or_none()
     if not project_orm:
         raise HTTPException(status_code=404, detail="Project not found")
     if not project_orm.can_user_modify(current_user.id):
-        raise HTTPException(status_code=403, detail="You do not have permission to delete this project")
+        raise HTTPException(
+            status_code=403, detail="You do not have permission to delete this project",
+        )
     await db.delete(project_orm)
     await db.commit()
 
 
 @projects.post("/{project_id}/items")
-async def add_item_to_project(project_id: int, item: AddItemToProjectRequest, current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> Project:
+async def add_item_to_project(
+    project_id: int,
+    item: AddItemToProjectRequest,
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Project:
     result = await db.execute(
         select(ProjectOrm)
         .where(ProjectOrm.id == project_id)
-        .options(selectinload(ProjectOrm.group).selectinload(UserGroupOrm.user_memberships)),
+        .options(
+            selectinload(ProjectOrm.group).selectinload(UserGroupOrm.user_memberships),
+        ),
     )
     project_orm = result.scalar_one_or_none()
     if not project_orm:
         raise HTTPException(status_code=404, detail="Project not found")
     if not project_orm.can_user_modify(current_user.id):
-        raise HTTPException(status_code=403, detail="You do not have permission to modify this project")
+        raise HTTPException(
+            status_code=403, detail="You do not have permission to modify this project",
+        )
 
     # Find the item based on type
     item_name = None
@@ -185,7 +228,9 @@ async def add_item_to_project(project_id: int, item: AddItemToProjectRequest, cu
         item_orm = await GameItemOrm.get_by_id(item.item_id)
         if not item_orm:
             # Try finding by primary key ID as fallback
-            result = await db.execute(select(GameItemOrm).where(GameItemOrm.id == item.item_id))
+            result = await db.execute(
+                select(GameItemOrm).where(GameItemOrm.id == item.item_id),
+            )
             item_orm = result.scalar_one_or_none()
         if item_orm:
             item_name = item_orm.name
@@ -198,13 +243,17 @@ async def add_item_to_project(project_id: int, item: AddItemToProjectRequest, cu
         cargo_orm = await GameCargoOrm.get_by_id(item.item_id)
         if not cargo_orm:
             # Try finding by primary key ID as fallback
-            result = await db.execute(select(GameCargoOrm).where(GameCargoOrm.id == item.item_id))
+            result = await db.execute(
+                select(GameCargoOrm).where(GameCargoOrm.id == item.item_id),
+            )
             cargo_orm = result.scalar_one_or_none()
         if cargo_orm:
             item_name = cargo_orm.name
 
     if not item_name:
-        raise HTTPException(status_code=404, detail=f"{item.item_type.capitalize()} not found")
+        raise HTTPException(
+            status_code=404, detail=f"{item.item_type.capitalize()} not found",
+        )
 
     project_item_orm = ProjectItemOrm(
         project_id=project_id,
@@ -227,17 +276,30 @@ async def add_item_to_project(project_id: int, item: AddItemToProjectRequest, cu
 
 
 @projects.delete("/{project_id}/items/{item_id}")
-async def remove_item_from_project(project_id: int, item_id: int, current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> Project:
+async def remove_item_from_project(
+    project_id: int,
+    item_id: int,
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Project:
     result = await db.execute(
         select(ProjectItemOrm)
-        .where(ProjectItemOrm.project_id == project_id, ProjectItemOrm.item_id == item_id)
-        .options(selectinload(ProjectItemOrm.project).selectinload(ProjectOrm.group).selectinload(UserGroupOrm.user_memberships)),
+        .where(
+            ProjectItemOrm.project_id == project_id, ProjectItemOrm.item_id == item_id,
+        )
+        .options(
+            selectinload(ProjectItemOrm.project)
+            .selectinload(ProjectOrm.group)
+            .selectinload(UserGroupOrm.user_memberships),
+        ),
     )
     project_item_orm = result.scalar_one_or_none()
     if not project_item_orm:
         raise HTTPException(status_code=404, detail="Item not found in project")
     if not project_item_orm.project.can_user_modify(current_user.id):
-        raise HTTPException(status_code=403, detail="You do not have permission to modify this project")
+        raise HTTPException(
+            status_code=403, detail="You do not have permission to modify this project",
+        )
     await db.delete(project_item_orm)
     await db.commit()
 
@@ -252,27 +314,43 @@ async def remove_item_from_project(project_id: int, item_id: int, current_user: 
 
 
 @projects.put("/{project_id}/items/{item_id}/count")
-async def update_project_item_count(project_id: int, item_id: int, update_data: UpdateProjectItemCountRequest, current_user: Annotated[UserOrm, Depends(get_current_user)], db: Annotated[AsyncSession, Depends(get_db)]) -> Project:
+async def update_project_item_count(
+    project_id: int,
+    item_id: int,
+    update_data: UpdateProjectItemCountRequest,
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Project:
     # First check if the project exists and user has access
     result = await db.execute(
         select(ProjectOrm)
         .where(ProjectOrm.id == project_id)
-        .options(selectinload(ProjectOrm.group).selectinload(UserGroupOrm.user_memberships)),
+        .options(
+            selectinload(ProjectOrm.group).selectinload(UserGroupOrm.user_memberships),
+        ),
     )
     project_orm = result.scalar_one_or_none()
     if not project_orm:
         raise HTTPException(status_code=404, detail="Project not found")
     if not project_orm.can_user_modify(current_user.id):
-        raise HTTPException(status_code=403, detail="You do not have permission to modify this project")
+        raise HTTPException(
+            status_code=403, detail="You do not have permission to modify this project",
+        )
 
     # Find the project item
-    result = await db.execute(select(ProjectItemOrm).where(ProjectItemOrm.project_id == project_id, ProjectItemOrm.item_id == item_id))
+    result = await db.execute(
+        select(ProjectItemOrm).where(
+            ProjectItemOrm.project_id == project_id, ProjectItemOrm.item_id == item_id,
+        ),
+    )
     project_item_orm = result.scalar_one_or_none()
     if not project_item_orm:
         raise HTTPException(status_code=404, detail="Item not found in project")
 
     # Update the count
-    project_item_orm.count = max(0, update_data.count)  # Ensure count doesn't go below 0
+    project_item_orm.count = max(
+        0, update_data.count,
+    )  # Ensure count doesn't go below 0
     await db.commit()
 
     # Reload the project with items relationship eagerly loaded
@@ -287,18 +365,25 @@ async def update_project_item_count(project_id: int, item_id: int, update_data: 
 
 # Group project endpoints
 @projects.post("/group/{group_id}/{project_id}")
-async def add_project_to_group(group_id: int, project_id: int, current_user: UserOrm = Depends(get_current_user)):
+async def add_project_to_group(
+    group_id: int, project_id: int, current_user: UserOrm = Depends(get_current_user),
+):
     return {"message": "Hello, World!"}
 
 
 @projects.delete("/group/{group_id}/{project_id}")
-async def remove_project_from_group(group_id: int, project_id: int, current_user: UserOrm = Depends(get_current_user)):
+async def remove_project_from_group(
+    group_id: int, project_id: int, current_user: UserOrm = Depends(get_current_user),
+):
     return {"message": "Hello, World!"}
 
 
 @projects.get("/group/{group_id}/projects")
-async def get_group_projects(group_id: int, current_user: UserOrm = Depends(get_current_user)):
+async def get_group_projects(
+    group_id: int, current_user: UserOrm = Depends(get_current_user),
+):
     return {"message": "Hello, World!"}
+
 
 # User project endpoints
 @projects.get("/user")
@@ -307,10 +392,14 @@ async def get_user_projects(current_user: UserOrm = Depends(get_current_user)):
 
 
 @projects.post("/user/{user_id}/{project_id}")
-async def add_project_to_user(user_id: int, project_id: int, current_user: UserOrm = Depends(get_current_user)):
+async def add_project_to_user(
+    user_id: int, project_id: int, current_user: UserOrm = Depends(get_current_user),
+):
     return {"message": "Hello, World!"}
 
 
 @projects.delete("/user/{user_id}/{project_id}")
-async def remove_project_from_user(user_id: int, project_id: int, current_user: UserOrm = Depends(get_current_user)):
+async def remove_project_from_user(
+    user_id: int, project_id: int, current_user: UserOrm = Depends(get_current_user),
+):
     return {"message": "Hello, World!"}

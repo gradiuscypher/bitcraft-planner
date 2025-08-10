@@ -17,10 +17,9 @@ class ProducedItem(BaseModel):
     amount: int
 
 
-
 class ToolRequirement(BaseModel):
-    """
-    """
+    """ """
+
     tool_id: int
     tool_name: str
     tier: int
@@ -33,8 +32,8 @@ class BuildingRequirement(BaseModel):
 
 
 class ExperiencePerProgress(BaseModel):
-    """
-    """
+    """ """
+
     skill_name: str
     experience_per_level: float
 
@@ -46,7 +45,7 @@ class LevelRequirement(BaseModel):
 
 class BuildingType(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-    id: int = Field(alias='building_id')
+    id: int = Field(alias="building_id")
     name: str
     category: int
 
@@ -78,6 +77,7 @@ class ItemRecipe(BaseModel):
         'allow_use_hands': False,
         'is_passive': False}
     """
+
     model_config = ConfigDict(from_attributes=True)
     id: int
     actions_required: int
@@ -109,8 +109,9 @@ class Item(BaseModel):
         'compendium_entry': True,
         'item_list_id': 0}
     """
+
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-    id: int = Field(alias='item_id')
+    id: int = Field(alias="item_id")
     name: str
     description: str
     volume: int
@@ -148,6 +149,7 @@ class BuildingRecipe(BaseModel):
         'instantly_built': False,
         'recipe_performance_id': 538}
     """
+
     id: int
     name: str
     time_requirement: float
@@ -174,37 +176,38 @@ class BuildingRecipe(BaseModel):
 
 class Building(BaseModel):
     """
-        Example:
-        {'id': 423663333,
-        'functions': [[40, 8, 12, 0, 0, 0, 0, 6000, 6000, 0, [], [], 1, False, 0, 0]],
-        'name': 'Pristine Fishing Station',
-        'description': 'A table for a fisher to prepare fishing rods and fish at',
-        'rested_buff_duration': 0,
-        'light_radius': 0,
-        'model_asset_name': 'Buildings/AncientFishingStation',
-        'icon_asset_name': 'GeneratedIcons/Other/GeneratedIcons/Other/Buildings/Crafting/AncientFishingWorkstation',
-        'unenterable': True,
-        'wilderness': True,
-        'footprint': [[0, 0, [0, []]],
-        [-1, 0, [0, []]],
-        [1, 0, [0, []]],
-        [-1, -1, [0, []]],
-        [-2, -1, [0, []]],
-        [-1, -2, [0, []]],
-        [0, -3, [0, []]],
-        [1, -3, [0, []]]],
-        'max_health': 120,
-        'ignore_damage': False,
-        'defense_level': 10000,
-        'decay': 1.0,
-        'maintenance': 0.0,
-        'build_permission': [1, {}],
-        'interact_permission': [3, {}],
-        'has_action': True,
-        'show_in_compendium': True,
-        'is_ruins': False,
-        'not_deconstructible': False}
+    Example:
+    {'id': 423663333,
+    'functions': [[40, 8, 12, 0, 0, 0, 0, 6000, 6000, 0, [], [], 1, False, 0, 0]],
+    'name': 'Pristine Fishing Station',
+    'description': 'A table for a fisher to prepare fishing rods and fish at',
+    'rested_buff_duration': 0,
+    'light_radius': 0,
+    'model_asset_name': 'Buildings/AncientFishingStation',
+    'icon_asset_name': 'GeneratedIcons/Other/GeneratedIcons/Other/Buildings/Crafting/AncientFishingWorkstation',
+    'unenterable': True,
+    'wilderness': True,
+    'footprint': [[0, 0, [0, []]],
+    [-1, 0, [0, []]],
+    [1, 0, [0, []]],
+    [-1, -1, [0, []]],
+    [-2, -1, [0, []]],
+    [-1, -2, [0, []]],
+    [0, -3, [0, []]],
+    [1, -3, [0, []]]],
+    'max_health': 120,
+    'ignore_damage': False,
+    'defense_level': 10000,
+    'decay': 1.0,
+    'maintenance': 0.0,
+    'build_permission': [1, {}],
+    'interact_permission': [3, {}],
+    'has_action': True,
+    'show_in_compendium': True,
+    'is_ruins': False,
+    'not_deconstructible': False}
     """
+
     id: int
     functions: list[list]
     name: str
@@ -253,8 +256,9 @@ class Cargo(BaseModel):
         'rarity': [1, {}],
         'not_pickupable': False}
     """
+
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-    id: int = Field(alias='cargo_id')
+    id: int = Field(alias="cargo_id")
     name: str
     description: str
     volume: int

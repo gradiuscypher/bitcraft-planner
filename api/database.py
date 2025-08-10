@@ -13,15 +13,20 @@ elif ENVIRONMENT == EnvironmentEnum.DEV:
     data_dir = Path.cwd()
     data_dir.mkdir(parents=True, exist_ok=True)
     database_path = data_dir / "bitcraft.db"
-    engine = create_async_engine(f"sqlite+aiosqlite:///{database_path}", connect_args={})
+    engine = create_async_engine(
+        f"sqlite+aiosqlite:///{database_path}", connect_args={},
+    )
 else:  # PROD
     import logfire
+
     logfire.configure(token=LOGFIRE_TOKEN, environment=ENVIRONMENT.value)
     logfire.configure(send_to_logfire=False)
     data_dir = Path("/api/data")
     data_dir.mkdir(parents=True, exist_ok=True)
     database_path = data_dir / "bitcraft.db"
-    engine = create_async_engine(f"sqlite+aiosqlite:///{database_path}", connect_args={})
+    engine = create_async_engine(
+        f"sqlite+aiosqlite:///{database_path}", connect_args={},
+    )
 
     logfire.instrument_sqlalchemy(engine)
 

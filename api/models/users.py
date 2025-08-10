@@ -15,6 +15,7 @@ class GroupMemberRole(str, Enum):
     CO_OWNER = "co_owner"
     OWNER = "owner"
 
+
 if TYPE_CHECKING:
     from models.projects import ProjectOrm
 
@@ -23,17 +24,26 @@ class UserGroupMembership(Base):
     __tablename__ = "user_group_memberships"
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
-    user_group_id: Mapped[int] = mapped_column(ForeignKey("user_groups.id"), primary_key=True)
-    role: Mapped[GroupMemberRole] = mapped_column(SQLEnum(GroupMemberRole), default=GroupMemberRole.MEMBER)
+    user_group_id: Mapped[int] = mapped_column(
+        ForeignKey("user_groups.id"), primary_key=True,
+    )
+    role: Mapped[GroupMemberRole] = mapped_column(
+        SQLEnum(GroupMemberRole), default=GroupMemberRole.MEMBER,
+    )
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
 
     # Relationships to the actual objects
-    user: Mapped["UserOrm"] = relationship("UserOrm", back_populates="group_memberships")
-    user_group: Mapped["UserGroupOrm"] = relationship("UserGroupOrm", back_populates="user_memberships")
+    user: Mapped["UserOrm"] = relationship(
+        "UserOrm", back_populates="group_memberships",
+    )
+    user_group: Mapped["UserGroupOrm"] = relationship(
+        "UserGroupOrm", back_populates="user_memberships",
+    )
 
 
 class BasicUser(BaseModel):
     """Simplified user model without circular references for use in groups"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -46,6 +56,7 @@ class BasicUser(BaseModel):
 
 class BasicUserWithRole(BaseModel):
     """User model with group role information"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -77,18 +88,28 @@ class UserOrm(Base):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    discord_id: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
+    discord_id: Mapped[str] = mapped_column(
+        String(20), unique=True, nullable=False, index=True,
+    )
     username: Mapped[str] = mapped_column(String(100), nullable=False)
     discriminator: Mapped[str] = mapped_column(String(10), nullable=True)
     global_name: Mapped[str] = mapped_column(String(100), nullable=True)
     avatar: Mapped[str] = mapped_column(String(200), nullable=True)
     email: Mapped[str] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC),
+    )
 
-    group_memberships: Mapped[list["UserGroupMembership"]] = relationship("UserGroupMembership", back_populates="user")
-    owned_groups: Mapped[list["UserGroupOrm"]] = relationship("UserGroupOrm", back_populates="owner")
-    projects: Mapped[list["ProjectOrm"]] = relationship("ProjectOrm", back_populates="owner")
+    group_memberships: Mapped[list["UserGroupMembership"]] = relationship(
+        "UserGroupMembership", back_populates="user",
+    )
+    owned_groups: Mapped[list["UserGroupOrm"]] = relationship(
+        "UserGroupOrm", back_populates="owner",
+    )
+    projects: Mapped[list["ProjectOrm"]] = relationship(
+        "ProjectOrm", back_populates="owner",
+    )
 
     @property
     def groups(self) -> list["UserGroupOrm"]:
@@ -108,6 +129,7 @@ class UserGroup(BaseModel):
 
 class UserGroupWithRoles(BaseModel):
     """User group model that includes role information for members"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -126,9 +148,13 @@ class UserGroupOrm(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     owner: Mapped[UserOrm] = relationship("UserOrm", back_populates="owned_groups")
-    projects: Mapped[list["ProjectOrm"]] = relationship("ProjectOrm", back_populates="group")
+    projects: Mapped[list["ProjectOrm"]] = relationship(
+        "ProjectOrm", back_populates="group",
+    )
 
-    user_memberships: Mapped[list["UserGroupMembership"]] = relationship("UserGroupMembership", back_populates="user_group")
+    user_memberships: Mapped[list["UserGroupMembership"]] = relationship(
+        "UserGroupMembership", back_populates="user_group",
+    )
 
     @property
     def users(self) -> list[UserOrm]:
@@ -139,14 +165,17 @@ class UserGroupOrm(Base):
         if self.owner_id == user_id:
             return True
         # Check if user is in the memberships
-        return any(membership.user_id == user_id for membership in self.user_memberships)
+        return any(
+            membership.user_id == user_id for membership in self.user_memberships
+        )
 
     def is_user_owner_or_co_owner(self, user_id: int) -> bool:
         """Check if user is the owner or a co-owner of the group"""
         if self.owner_id == user_id:
             return True
         return any(
-            membership.user_id == user_id and membership.role == GroupMemberRole.CO_OWNER
+            membership.user_id == user_id
+            and membership.role == GroupMemberRole.CO_OWNER
             for membership in self.user_memberships
         )
 

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship, foreign
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
 
@@ -86,15 +86,23 @@ class ProjectOrm(Base):
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     group_id: Mapped[int] = mapped_column(ForeignKey("user_groups.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC),
+    )
 
     owner: Mapped["UserOrm"] = relationship("UserOrm", back_populates="projects")
-    group: Mapped["UserGroupOrm | None"] = relationship("UserGroupOrm", back_populates="projects")
-    items: Mapped[list["ProjectItemOrm"]] = relationship("ProjectItemOrm", back_populates="project")
+    group: Mapped["UserGroupOrm | None"] = relationship(
+        "UserGroupOrm", back_populates="projects",
+    )
+    items: Mapped[list["ProjectItemOrm"]] = relationship(
+        "ProjectItemOrm", back_populates="project",
+    )
 
     def does_user_have_access(self, user_id: int) -> bool:
         """Check if user can view the project"""
-        return self.owner_id == user_id or (self.group_id is not None and self.group.is_user_in_group(user_id))
+        return self.owner_id == user_id or (
+            self.group_id is not None and self.group.is_user_in_group(user_id)
+        )
 
     def can_user_modify(self, user_id: int) -> bool:
         """Check if user can modify the project"""

@@ -42,6 +42,7 @@ security = HTTPBearer()
 
 class UserResponse(BaseModel):
     """Response model for user information"""
+
     id: int
     discord_id: str
     username: str
@@ -59,11 +60,13 @@ class UserResponse(BaseModel):
 
 class LoginResponse(BaseModel):
     """Response model for login redirect"""
+
     login_url: str
 
 
 class CallbackResponse(BaseModel):
     """Response model for OAuth callback"""
+
     access_token: str
     token_type: str
     expires_in: int
@@ -157,7 +160,9 @@ async def get_current_user(
         select(UserOrm)
         .where(UserOrm.id == payload["user_id"])
         .options(
-            selectinload(UserOrm.group_memberships).selectinload(UserGroupMembership.user_group),
+            selectinload(UserOrm.group_memberships).selectinload(
+                UserGroupMembership.user_group,
+            ),
         )
     )
     result = await db.execute(stmt)
@@ -257,7 +262,9 @@ async def callback(code: str, db: Annotated[AsyncSession, Depends(get_db)]):
 
 
 @auth.get("/me")
-async def get_me(current_user: Annotated[UserOrm, Depends(get_current_user)]) -> UserResponse:
+async def get_me(
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+) -> UserResponse:
     """Get current user information"""
     return UserResponse(
         id=current_user.id,

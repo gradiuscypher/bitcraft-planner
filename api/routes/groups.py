@@ -34,7 +34,11 @@ async def get_groups(
 ) -> list[UserGroup]:
     result = await db.execute(
         select(UserGroupOrm)
-        .join(UserGroupMembership, UserGroupOrm.id == UserGroupMembership.user_group_id, isouter=True)
+        .join(
+            UserGroupMembership,
+            UserGroupOrm.id == UserGroupMembership.user_group_id,
+            isouter=True,
+        )
         .where(
             or_(
                 UserGroupOrm.owner_id == current_user.id,  # User is owner
@@ -42,7 +46,9 @@ async def get_groups(
             ),
         )
         .options(
-            selectinload(UserGroupOrm.user_memberships).selectinload(UserGroupMembership.user),
+            selectinload(UserGroupOrm.user_memberships).selectinload(
+                UserGroupMembership.user,
+            ),
             selectinload(UserGroupOrm.owner),
         )
         .distinct(),
@@ -59,14 +65,16 @@ async def get_groups(
             if membership.user_id != group.owner_id:
                 users.append(BasicUser.model_validate(membership.user))
 
-        groups_to_return.append(UserGroup(
-            id=group.id,
-            name=group.name,
-            created_at=group.created_at,
-            owner_id=group.owner_id,
-            users=users,
-            can_create_projects=group.is_user_owner_or_co_owner(current_user.id),
-        ))
+        groups_to_return.append(
+            UserGroup(
+                id=group.id,
+                name=group.name,
+                created_at=group.created_at,
+                owner_id=group.owner_id,
+                users=users,
+                can_create_projects=group.is_user_owner_or_co_owner(current_user.id),
+            ),
+        )
 
     return groups_to_return
 
@@ -81,7 +89,9 @@ async def get_group(
         select(UserGroupOrm)
         .where(UserGroupOrm.id == group_id)
         .options(
-            selectinload(UserGroupOrm.user_memberships).selectinload(UserGroupMembership.user),
+            selectinload(UserGroupOrm.user_memberships).selectinload(
+                UserGroupMembership.user,
+            ),
             selectinload(UserGroupOrm.owner),
         ),
     )
@@ -91,13 +101,14 @@ async def get_group(
         raise HTTPException(status_code=404, detail="Group not found")
 
     # Check if user has access to this group (owner or member)
-    user_has_access = (
-        group.owner_id == current_user.id or
-        any(membership.user_id == current_user.id for membership in group.user_memberships)
+    user_has_access = group.owner_id == current_user.id or any(
+        membership.user_id == current_user.id for membership in group.user_memberships
     )
 
     if not user_has_access:
-        raise HTTPException(status_code=403, detail="You do not have access to this group")
+        raise HTTPException(
+            status_code=403, detail="You do not have access to this group",
+        )
 
     # Manually construct UserGroupWithRoles object to include role information
     users_with_roles = []
@@ -152,9 +163,6 @@ async def create_group(
     await db.commit()
 
 
-
-
-
 @groups.delete("/{group_id}")
 async def delete_group(
     group_id: int,
@@ -168,10 +176,14 @@ async def delete_group(
         raise HTTPException(status_code=404, detail="Group not found")
 
     if target_group.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You are not the owner of this group")
+        raise HTTPException(
+            status_code=403, detail="You are not the owner of this group",
+        )
 
     memberships_result = await db.execute(
-        select(UserGroupMembership).where(UserGroupMembership.user_group_id == group_id),
+        select(UserGroupMembership).where(
+            UserGroupMembership.user_group_id == group_id,
+        ),
     )
     memberships = memberships_result.scalars().all()
     for membership in memberships:
@@ -202,10 +214,14 @@ async def add_user_to_group(
         raise HTTPException(status_code=404, detail="Group not found")
 
     if target_group.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You are not the owner of this group")
+        raise HTTPException(
+            status_code=403, detail="You are not the owner of this group",
+        )
 
     # Check if user exists and get their user_id
-    user_result = await db.execute(select(UserOrm).where(UserOrm.discord_id == discord_id))
+    user_result = await db.execute(
+        select(UserOrm).where(UserOrm.discord_id == discord_id),
+    )
     user = user_result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -239,10 +255,14 @@ async def remove_user_from_group(
         raise HTTPException(status_code=404, detail="Group not found")
 
     if target_group.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You are not the owner of this group")
+        raise HTTPException(
+            status_code=403, detail="You are not the owner of this group",
+        )
 
     # Check if user exists and get their user_id
-    user_result = await db.execute(select(UserOrm).where(UserOrm.discord_id == discord_id))
+    user_result = await db.execute(
+        select(UserOrm).where(UserOrm.discord_id == discord_id),
+    )
     user = user_result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -279,10 +299,15 @@ async def promote_user_to_co_owner(
 
     # Only the group owner can promote members to co-owner
     if target_group.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Only the group owner can promote members to co-owner")
+        raise HTTPException(
+            status_code=403,
+            detail="Only the group owner can promote members to co-owner",
+        )
 
     # Check if user exists and get their user_id
-    user_result = await db.execute(select(UserOrm).where(UserOrm.discord_id == discord_id))
+    user_result = await db.execute(
+        select(UserOrm).where(UserOrm.discord_id == discord_id),
+    )
     user = user_result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -322,10 +347,14 @@ async def demote_co_owner_to_member(
 
     # Only the group owner can demote co-owners
     if target_group.owner_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Only the group owner can demote co-owners")
+        raise HTTPException(
+            status_code=403, detail="Only the group owner can demote co-owners",
+        )
 
     # Check if user exists and get their user_id
-    user_result = await db.execute(select(UserOrm).where(UserOrm.discord_id == discord_id))
+    user_result = await db.execute(
+        select(UserOrm).where(UserOrm.discord_id == discord_id),
+    )
     user = user_result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
