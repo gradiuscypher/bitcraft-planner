@@ -34,7 +34,8 @@ import {
   Plus,
   Minus,
   Filter,
-  ChevronDown
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react';
 import {
   Table,
@@ -69,6 +70,7 @@ export function ProjectDetailPage() {
       return 'table';
     }
   });
+  const [expandedItemIds, setExpandedItemIds] = useState<Set<number>>(new Set());
   
   // Use polling hooks for automatic updates
   const { 
@@ -207,6 +209,11 @@ export function ProjectDetailPage() {
       localStorage.setItem(`project:${projectId}:viewMode`, viewMode);
     } catch {}
   }, [projectId, viewMode]);
+
+  // Collapse expanded table rows when collapse-all is triggered
+  useEffect(() => {
+    setExpandedItemIds(new Set());
+  }, [collapseAllSignal]);
 
 
   const getCurrentCount = (itemId: number, fallback: number) => {
@@ -669,6 +676,7 @@ export function ProjectDetailPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-8"></TableHead>
                           <TableHead>Name</TableHead>
                           <TableHead>Tier</TableHead>
                           <TableHead className="text-right">Progress</TableHead>
@@ -681,97 +689,131 @@ export function ProjectDetailPage() {
                       <TableBody>
                         {project.items?.filter((i) => !hideCompleted || i.count < i.target_count).map((item) => {
                           const itemProgress = item.target_count > 0 ? Math.round((item.count / item.target_count) * 100) : 0;
+                          const expanded = expandedItemIds.has(item.item_id);
+                          const colSpan = canUserModifyProject(project) ? 6 : 5;
                           return (
-                            <TableRow key={`row-${project.id}-${item.item_id}`}>
-                              <TableCell className="font-medium">
-                                {item.name}
-                              </TableCell>
-                              <TableCell>
-                                <TierTag tier={item.tier ?? null} />
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <span className="text-sm text-muted-foreground">{itemProgress}%</span>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <span className="text-sm text-foreground">{getCurrentCount(item.item_id, item.count)} / {item.target_count}</span>
-                              </TableCell>
-                              {canUserModifyProject(project) && (
-                                <TableCell className="text-right">
-                                  <div className="inline-flex items-center gap-1">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        const current = getCurrentCount(item.item_id, item.count);
-                                        setPendingCount(item.item_id, Math.max(0, current - 1), item.count);
-                                      }}
-                                      disabled={getCurrentCount(item.item_id, item.count) <= 0}
-                                      className="h-7 w-7 p-0"
-                                    >
-                                      <Minus className="h-3 w-3" />
-                                    </Button>
-                                    <Input
-                                      type="number"
-                                      inputMode="numeric"
-                                      min={0}
-                                      max={item.target_count}
-                                      value={getCurrentCount(item.item_id, item.count)}
-                                      onChange={(e) => {
-                                        const val = e.target.value;
-                                        const parsed = Number(val);
-                                        if (Number.isNaN(parsed)) {
-                                          setPendingCount(item.item_id, 0, item.count);
-                                        } else {
-                                          const clamped = Math.min(Math.max(0, parsed), item.target_count);
-                                          setPendingCount(item.item_id, clamped, item.count);
-                                        }
-                                      }}
-                                      className="h-7 w-20 px-2 text-center text-xs"
-                                    />
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        const current = getCurrentCount(item.item_id, item.count);
-                                        setPendingCount(
-                                          item.item_id,
-                                          Math.min(item.target_count, current + 1),
-                                          item.count
-                                        );
-                                      }}
-                                      disabled={getCurrentCount(item.item_id, item.count) >= item.target_count}
-                                      className="h-7 w-7 p-0"
-                                    >
-                                      <Plus className="h-3 w-3" />
-                                    </Button>
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7 w-7 p-0">
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Remove Item</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            Are you sure you want to remove "{item.name}" from this project?
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                          <AlertDialogAction
-                                            onClick={() => handleRemoveItem(item.item_id)}
-                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                          >
-                                            Remove Item
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  </div>
+                            <>
+                              <TableRow key={`row-${project.id}-${item.item_id}`}>
+                                <TableCell className="w-8">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setExpandedItemIds(prev => {
+                                        const next = new Set(prev);
+                                        if (next.has(item.item_id)) next.delete(item.item_id); else next.add(item.item_id);
+                                        return next;
+                                      });
+                                    }}
+                                    aria-label={expanded ? 'Collapse' : 'Expand'}
+                                  >
+                                    {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                  </Button>
                                 </TableCell>
+                                <TableCell className="font-medium">
+                                  {item.name}
+                                </TableCell>
+                                <TableCell>
+                                  <TierTag tier={item.tier ?? null} />
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <span className="text-sm text-muted-foreground">{itemProgress}%</span>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <span className="text-sm text-foreground">{getCurrentCount(item.item_id, item.count)} / {item.target_count}</span>
+                                </TableCell>
+                                {canUserModifyProject(project) && (
+                                  <TableCell className="text-right">
+                                    <div className="inline-flex items-center gap-1">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          const current = getCurrentCount(item.item_id, item.count);
+                                          setPendingCount(item.item_id, Math.max(0, current - 1), item.count);
+                                        }}
+                                        disabled={getCurrentCount(item.item_id, item.count) <= 0}
+                                        className="h-7 w-7 p-0"
+                                      >
+                                        <Minus className="h-3 w-3" />
+                                      </Button>
+                                      <Input
+                                        type="number"
+                                        inputMode="numeric"
+                                        min={0}
+                                        max={item.target_count}
+                                        value={getCurrentCount(item.item_id, item.count)}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          const parsed = Number(val);
+                                          if (Number.isNaN(parsed)) {
+                                            setPendingCount(item.item_id, 0, item.count);
+                                          } else {
+                                            const clamped = Math.min(Math.max(0, parsed), item.target_count);
+                                            setPendingCount(item.item_id, clamped, item.count);
+                                          }
+                                        }}
+                                        className="h-7 w-20 px-2 text-center text-xs"
+                                      />
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          const current = getCurrentCount(item.item_id, item.count);
+                                          setPendingCount(
+                                            item.item_id,
+                                            Math.min(item.target_count, current + 1),
+                                            item.count
+                                          );
+                                        }}
+                                        disabled={getCurrentCount(item.item_id, item.count) >= item.target_count}
+                                        className="h-7 w-7 p-0"
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </Button>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7 w-7 p-0">
+                                            <Trash2 className="h-3 w-3" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Remove Item</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Are you sure you want to remove "{item.name}" from this project?
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                              onClick={() => handleRemoveItem(item.item_id)}
+                                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            >
+                                              Remove Item
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </div>
+                                  </TableCell>
+                                )}
+                              </TableRow>
+                              {expanded && (
+                                <TableRow>
+                                  <TableCell colSpan={colSpan} className="bg-muted p-0">
+                                    <div className="p-3">
+                                      <ProjectItemIngredients
+                                        itemId={item.item_id}
+                                        itemName={item.name}
+                                        collapseAllSignal={collapseAllSignal}
+                                        persistKey={`${project.id}:${item.item_id}`}
+                                      />
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
                               )}
-                            </TableRow>
+                            </>
                           );
                         })}
                       </TableBody>
