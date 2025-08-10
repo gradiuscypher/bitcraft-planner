@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { projectsService } from '@/lib/projects-service';
 import { useProjectPolling, useGroupPolling } from '@/hooks/use-projects-polling';
@@ -780,9 +780,10 @@ export function ProjectDetailPage() {
                           const itemProgress = item.target_count > 0 ? Math.round((item.count / item.target_count) * 100) : 0;
                           const expanded = expandedItemIds.has(item.item_id);
                           const colSpan = canUserModifyProject(project) ? 6 : 5;
+                          const groupKey = `projitem-${project.id}-${item.id}`;
                           return (
-                            <>
-                              <TableRow key={`row-${project.id}-${item.item_id}`}>
+                            <React.Fragment key={groupKey}>
+                              <TableRow>
                                 <TableCell className="w-8">
                                   <Button
                                     variant="ghost"
@@ -889,14 +890,14 @@ export function ProjectDetailPage() {
                                 )}
                               </TableRow>
                               {expanded && (
-                                <TableRow>
+                                <TableRow key={`${groupKey}-details`}>
                                   <TableCell colSpan={colSpan} className="bg-muted p-0">
                                     <div className="p-3">
                                       <ProjectItemIngredients
                                         itemId={item.item_id}
                                         itemName={item.name}
                                         collapseAllSignal={collapseAllSignal}
-                                        persistKey={`${project.id}:${item.item_id}`}
+                                        persistKey={`${project.id}:${item.id}`}
                                         forceOpen
                                         hideToggle
                                       />
@@ -904,7 +905,7 @@ export function ProjectDetailPage() {
                                   </TableCell>
                                 </TableRow>
                               )}
-                            </>
+                            </React.Fragment>
                           );
                         })}
                       </TableBody>
