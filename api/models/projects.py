@@ -95,7 +95,10 @@ class ProjectOrm(Base):
         "UserGroupOrm", back_populates="projects",
     )
     items: Mapped[list["ProjectItemOrm"]] = relationship(
-        "ProjectItemOrm", back_populates="project",
+        "ProjectItemOrm",
+        back_populates="project",
+        cascade="all, delete-orphan",
+        single_parent=True,
     )
 
     def does_user_have_access(self, user_id: int) -> bool:
