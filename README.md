@@ -6,6 +6,7 @@ Crafting planner for Bitcraft Online
 
 # Working on
 - Clean up TODO
+- Proof of concept to pay for web service with Market Stall?
 - Provide filters for items (tiers, completed, future - filter by related skills of your character)
 - highlight items that are crafted vs gathered in the project list?
 - can we cache ingredients locally so it doesnt have to query everything? set an expiration
