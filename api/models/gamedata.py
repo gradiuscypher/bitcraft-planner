@@ -226,32 +226,32 @@ class GameBuildingRecipeOrm(Base):
             return result.scalar_one_or_none()
 
 
-# class GameClaimOrm(Base):
-#     __tablename__ = "game_claims"
-#     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-#     claim_id: Mapped[int] = mapped_column(Integer, nullable=False)
-#     owner_id: Mapped[int] = mapped_column(Integer, nullable=False)
-#     owner_building_id: Mapped[int] = mapped_column(Integer, nullable=False)
-#     name: Mapped[str] = mapped_column(String(255), nullable=False)
+class GameClaimOrm(Base):
+    __tablename__ = "game_claims"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    claim_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    owner_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    owner_building_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
 
-#     @staticmethod
-#     async def index_claims() -> None:
-#         result = execute_query("SELECT * FROM claim_state")
-#         try:
-#             async with SessionLocal() as session:
-#                 for claim_str in result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]:
-#                     claim_obj = json.loads(claim_str)
-#                     claim_orm = GameClaimOrm(
-#                         claim_id=claim_obj["entity_id"],
-#                         owner_id=claim_obj["owner_player_entity_id"],
-#                         owner_building_id=claim_obj["owner_building_entity_id"],
-#                         name=claim_obj["name"],
-#                     )
-#                     session.add(claim_orm)
-#                 await session.commit()
+    @staticmethod
+    async def index_claims() -> None:
+        result = execute_query("SELECT * FROM claim_state")
+        try:
+            async with SessionLocal() as session:
+                for claim_str in result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]:
+                    claim_obj = json.loads(claim_str)
+                    claim_orm = GameClaimOrm(
+                        claim_id=claim_obj["entity_id"],
+                        owner_id=claim_obj["owner_player_entity_id"],
+                        owner_building_id=claim_obj["owner_building_entity_id"],
+                        name=claim_obj["name"],
+                    )
+                    session.add(claim_orm)
+                await session.commit()
 
-#         except KeyError:
-#             logger.exception("Failed to index claims")
+        except KeyError:
+            logger.exception("Failed to index claims")
 
 
 class SearchResult:

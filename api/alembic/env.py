@@ -74,6 +74,29 @@ def run_migrations_offline() -> None:
     # write the resolved URL into config for script context
     config.set_main_option("sqlalchemy.url", url)
 
+    def include_object(object, name, type_, reflected, compare_to):  # noqa: ANN001
+        # Exclude SQLite FTS auxiliary and virtual tables from autogenerate
+        fts_tables = {
+            "items_fts",
+            "items_fts_data",
+            "items_fts_docsize",
+            "items_fts_config",
+            "items_fts_idx",
+            "buildings_fts",
+            "buildings_fts_data",
+            "buildings_fts_docsize",
+            "buildings_fts_config",
+            "buildings_fts_idx",
+            "cargo_fts",
+            "cargo_fts_data",
+            "cargo_fts_docsize",
+            "cargo_fts_config",
+            "cargo_fts_idx",
+        }
+        if type_ == "table" and name in fts_tables:
+            return False
+        return True
+
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -81,6 +104,7 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
         compare_server_default=True,
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -99,12 +123,36 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        def include_object(object, name, type_, reflected, compare_to):  # noqa: ANN001
+            # Exclude SQLite FTS auxiliary and virtual tables from autogenerate
+            fts_tables = {
+                "items_fts",
+                "items_fts_data",
+                "items_fts_docsize",
+                "items_fts_config",
+                "items_fts_idx",
+                "buildings_fts",
+                "buildings_fts_data",
+                "buildings_fts_docsize",
+                "buildings_fts_config",
+                "buildings_fts_idx",
+                "cargo_fts",
+                "cargo_fts_data",
+                "cargo_fts_docsize",
+                "cargo_fts_config",
+                "cargo_fts_idx",
+            }
+            if type_ == "table" and name in fts_tables:
+                return False
+            return True
+
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
             compare_server_default=True,
             render_as_batch=connection.dialect.name == "sqlite",
+            include_object=include_object,
         )
 
         with context.begin_transaction():
