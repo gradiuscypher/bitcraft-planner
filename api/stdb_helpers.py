@@ -67,57 +67,6 @@ def execute_query(query: str) -> dict | None:
     return data
 
 
-def get_claim_id(claim_name: str) -> dict | None:
-    result = execute_query(f"SELECT * FROM claim_state where name =='{claim_name}'")
-    claim_id_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
-
-    if claim_id_list:
-        return json.loads(claim_id_list[0])
-    return None
-
-
-def get_claim_buildings(claim_id: int) -> dict | None:
-    result = execute_query(f"SELECT * FROM building_state where claim_entity_id == {claim_id}")
-    building_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
-    if building_list:
-        return [json.loads(building) for building in building_list]
-    return None
-
-
-def get_building_inventory(building_id: int) -> dict | None:
-    result = execute_query(f"SELECT * FROM inventory_state where owner_entity_id == {building_id}")
-    inventory_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
-    if inventory_list:
-        return [json.loads(inventory) for inventory in inventory_list]
-    return None
-
-
-def get_building_nickname(building_id: int) -> dict | None:
-    result = execute_query(f"SELECT * FROM building_nickname_state where entity_id == {building_id}")
-    nickname_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
-    if nickname_list:
-        return json.loads(nickname_list[0])["nickname"]
-    return None
-
-
-def get_user_id(username: str) -> dict | None:
-    bc_token = get_bitcraft_token()
-    if bc_token is None:
-        logger.error("Failed to get BitCraft token")
-        return None
-
-    proto = Subprotocol("v1.json.spacetimedb")
-    with connect(BITCRAFT_WSS_URL, additional_headers={"Authorization": "Bearer " + bc_token}, subprotocols=[proto], max_size=None, max_queue=None) as ws:
-        ws.recv()
-        sub = json.dumps(dict(Subscribe=dict(request_id=1, query_strings=[f"SELECT * FROM player_username_state where username='{username}'"])))
-        ws.send(sub)
-        for msg in ws:
-            usernames = json.loads(msg)
-            break
-        ws.close()
-    return usernames
-
-
 def subscribe_to_query(query: str) -> None:
     bc_token = get_bitcraft_token()
     if bc_token is None:
@@ -169,3 +118,54 @@ def subscribe_to_query_generator(query: str) -> Generator[Any, None, None]:
                 ws.close()
             except Exception:
                 pass  # Connection might already be closed
+
+
+def get_claim_id(claim_name: str) -> dict | None:
+    result = execute_query(f"SELECT * FROM claim_state where name =='{claim_name}'")
+    claim_id_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
+
+    if claim_id_list:
+        return json.loads(claim_id_list[0])
+    return None
+
+
+def get_claim_buildings(claim_id: int) -> dict | None:
+    result = execute_query(f"SELECT * FROM building_state where claim_entity_id == {claim_id}")
+    building_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
+    if building_list:
+        return [json.loads(building) for building in building_list]
+    return None
+
+
+def get_building_inventory(building_id: int) -> dict | None:
+    result = execute_query(f"SELECT * FROM inventory_state where owner_entity_id == {building_id}")
+    inventory_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
+    if inventory_list:
+        return [json.loads(inventory) for inventory in inventory_list]
+    return None
+
+
+def get_building_nickname(building_id: int) -> dict | None:
+    result = execute_query(f"SELECT * FROM building_nickname_state where entity_id == {building_id}")
+    nickname_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
+    if nickname_list:
+        return json.loads(nickname_list[0])["nickname"]
+    return None
+
+
+def get_user_id(username: str) -> dict | None:
+    bc_token = get_bitcraft_token()
+    if bc_token is None:
+        logger.error("Failed to get BitCraft token")
+        return None
+
+    proto = Subprotocol("v1.json.spacetimedb")
+    with connect(BITCRAFT_WSS_URL, additional_headers={"Authorization": "Bearer " + bc_token}, subprotocols=[proto], max_size=None, max_queue=None) as ws:
+        ws.recv()
+        sub = json.dumps(dict(Subscribe=dict(request_id=1, query_strings=[f"SELECT * FROM player_username_state where username='{username}'"])))
+        ws.send(sub)
+        for msg in ws:
+            usernames = json.loads(msg)
+            break
+        ws.close()
+    return usernames
