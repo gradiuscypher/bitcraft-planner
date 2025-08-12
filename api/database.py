@@ -16,7 +16,8 @@ if ENVIRONMENT == EnvironmentEnum.TEST:
         poolclass=StaticPool,
     )
 elif ENVIRONMENT == EnvironmentEnum.DEV:
-    data_dir = Path.cwd()
+    # Anchor DB next to this file to avoid varying CWD creating multiple DBs
+    data_dir = Path(__file__).resolve().parent
     data_dir.mkdir(parents=True, exist_ok=True)
     database_path = data_dir / "bitcraft.db"
     engine = create_async_engine(

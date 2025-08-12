@@ -7,7 +7,7 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
 
 from database import AsyncSession, Base, SessionLocal, init_database, reset_database
-from stdb_helpers import execute_query
+from stdb_helpers import execute_query, get_building_inventory, get_building_nickname, get_claim_buildings
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,11 @@ class GameItemOrm(Base):
     volume: Mapped[int] = mapped_column(Integer)
     durability: Mapped[int] = mapped_column(Integer)
     icon_asset_name: Mapped[str] = mapped_column(String(255))
+
+    # Add back-reference to inventory items
+    inventory_items: Mapped[list["GameClaimInventoryItemOrm"]] = relationship(
+        "GameClaimInventoryItemOrm", back_populates="item",
+    )
 
     @classmethod
     async def get_by_id(cls, item_id: int) -> "GameItemOrm":
@@ -241,6 +246,7 @@ class GameClaimOrm(Base):
             async with SessionLocal() as session:
                 for claim_str in result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]:
                     claim_obj = json.loads(claim_str)
+                    print(f"Indexing claim {claim_obj['name']} - {claim_obj['entity_id']}")
                     claim_orm = GameClaimOrm(
                         claim_id=claim_obj["entity_id"],
                         owner_id=claim_obj["owner_player_entity_id"],
@@ -252,6 +258,119 @@ class GameClaimOrm(Base):
 
         except KeyError:
             logger.exception("Failed to index claims")
+
+
+class GameClaimBuildingOrm(Base):
+    __tablename__ = "game_claim_buildings"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    claim_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    building_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    building_description_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    building_owner_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    building_nickname: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # One-to-one relationship with GameClaimBuildingInventoryOrm
+    inventory: Mapped["GameClaimBuildingInventoryOrm"] = relationship(
+        "GameClaimBuildingInventoryOrm",
+        back_populates="building",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+    @staticmethod
+    async def index_claim_buildings(session: AsyncSession, claim_id: int) -> None:
+        result = get_claim_buildings(claim_id)
+        try:
+            if not result:
+                return
+            for building_obj in result:
+                print("Fetching building nickname for", building_obj["entity_id"])
+                building_nickname = get_building_nickname(building_obj["entity_id"])
+                print("Building the ORM")
+                building_orm = GameClaimBuildingOrm(
+                    claim_id=building_obj["claim_entity_id"],
+                    building_id=building_obj["entity_id"],
+                    building_description_id=building_obj["building_description_id"],
+                    building_owner_id=building_obj["constructed_by_player_entity_id"],
+                    building_nickname=building_nickname,
+                )
+                session.add(building_orm)
+            await session.commit()
+
+        except KeyError:
+            logger.exception("Failed to index claim buildings")
+
+    @classmethod
+    async def get_by_building_id(cls, building_id: int) -> "GameClaimBuildingOrm":
+        async with SessionLocal() as session:
+            result = await session.execute(
+                select(cls).filter(cls.building_id == building_id),
+            )
+            return result.scalar_one_or_none()
+
+
+class GameClaimInventoryItemOrm(Base):
+    __tablename__ = "game_claim_inventory_items"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    inventory_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_claim_building_inventories.id"), nullable=False)
+    item_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_items.id"), nullable=False)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # Many-to-one relationship with GameClaimBuildingInventoryOrm
+    inventory: Mapped["GameClaimBuildingInventoryOrm"] = relationship(
+        "GameClaimBuildingInventoryOrm",
+        back_populates="items",
+    )
+
+    # Many-to-one relationship with GameItemOrm
+    item: Mapped["GameItemOrm"] = relationship(
+        "GameItemOrm",
+        back_populates="inventory_items",
+    )
+
+
+class GameClaimBuildingInventoryOrm(Base):
+    __tablename__ = "game_claim_building_inventories"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    building_id: Mapped[int] = mapped_column(Integer, ForeignKey("game_claim_buildings.id"), nullable=False)
+
+    # One-to-one relationship with GameClaimBuildingOrm
+    building: Mapped["GameClaimBuildingOrm"] = relationship(
+        "GameClaimBuildingOrm",
+        back_populates="inventory",
+    )
+
+    # One-to-many relationship with GameClaimInventoryItemOrm
+    items: Mapped[list["GameClaimInventoryItemOrm"]] = relationship(
+        "GameClaimInventoryItemOrm",
+        back_populates="inventory",
+        cascade="all, delete-orphan",
+    )
+
+    @staticmethod
+    async def index_claim_building_inventories(building_id: int) -> None:
+        inventories = get_building_inventory(building_id)
+
+        async with SessionLocal() as session:
+            for inventory in inventories:
+                inventory_orm = GameClaimBuildingInventoryOrm(
+                    building_id=building_id,
+                    building=await GameClaimBuildingOrm.get_by_building_id(building_id),
+                )
+                item_list = []
+                for item in inventory["pockets"]:
+                    inv_item_id = item[1][1][0]
+                    inv_item_count = item[1][1][1]
+                    item_orm = GameClaimInventoryItemOrm(
+                        inventory_id=inventory_orm.id,
+                        item_id=inv_item_id,
+                        amount=inv_item_count,
+                    )
+                    item_list.append(item_orm)
+                    session.add(item_orm)
+                inventory_orm.items = item_list
+                session.add(inventory_orm)
+            await session.commit()
 
 
 class SearchResult:

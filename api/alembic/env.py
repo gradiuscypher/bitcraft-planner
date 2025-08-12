@@ -64,6 +64,28 @@ def _get_sqlalchemy_url() -> str:
         return config.get_main_option("sqlalchemy.url")
 
 
+# Names of SQLite FTS virtual and auxiliary tables that must be ignored during
+# Alembic autogenerate. Reflecting these can fail on systems where SQLite is
+# compiled without FTS5 support, resulting in "vtable constructor failed".
+FTS_TABLE_NAMES: set[str] = {
+    "items_fts",
+    "items_fts_data",
+    "items_fts_docsize",
+    "items_fts_config",
+    "items_fts_idx",
+    "buildings_fts",
+    "buildings_fts_data",
+    "buildings_fts_docsize",
+    "buildings_fts_config",
+    "buildings_fts_idx",
+    "cargo_fts",
+    "cargo_fts_data",
+    "cargo_fts_docsize",
+    "cargo_fts_config",
+    "cargo_fts_idx",
+}
+
+
 # Set target metadata for autogenerate
 target_metadata = Base.metadata
 
@@ -74,28 +96,15 @@ def run_migrations_offline() -> None:
     # write the resolved URL into config for script context
     config.set_main_option("sqlalchemy.url", url)
 
-    def include_object(object, name, type_, reflected, compare_to):  # noqa: ANN001
-        # Exclude SQLite FTS auxiliary and virtual tables from autogenerate
-        fts_tables = {
-            "items_fts",
-            "items_fts_data",
-            "items_fts_docsize",
-            "items_fts_config",
-            "items_fts_idx",
-            "buildings_fts",
-            "buildings_fts_data",
-            "buildings_fts_docsize",
-            "buildings_fts_config",
-            "buildings_fts_idx",
-            "cargo_fts",
-            "cargo_fts_data",
-            "cargo_fts_docsize",
-            "cargo_fts_config",
-            "cargo_fts_idx",
-        }
-        if type_ == "table" and name in fts_tables:
-            return False
-        return True
+    def include_name(name: str, type_: str, parent_names: dict[str, str] | None) -> bool:
+        # Prevent Alembic from reflecting FTS tables at all
+        return not (type_ == "table" and name in FTS_TABLE_NAMES)
+
+    def include_object(
+        obj: Any, name: str, type_: str, reflected: bool, compare_to: Any | None
+    ) -> bool:
+        # Additional safeguard at the object level
+        return not (type_ == "table" and name in FTS_TABLE_NAMES)
 
     context.configure(
         url=url,
@@ -104,6 +113,7 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
         compare_server_default=True,
+        include_name=include_name,
         include_object=include_object,
     )
 
@@ -123,28 +133,13 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        def include_object(object, name, type_, reflected, compare_to):  # noqa: ANN001
-            # Exclude SQLite FTS auxiliary and virtual tables from autogenerate
-            fts_tables = {
-                "items_fts",
-                "items_fts_data",
-                "items_fts_docsize",
-                "items_fts_config",
-                "items_fts_idx",
-                "buildings_fts",
-                "buildings_fts_data",
-                "buildings_fts_docsize",
-                "buildings_fts_config",
-                "buildings_fts_idx",
-                "cargo_fts",
-                "cargo_fts_data",
-                "cargo_fts_docsize",
-                "cargo_fts_config",
-                "cargo_fts_idx",
-            }
-            if type_ == "table" and name in fts_tables:
-                return False
-            return True
+        def include_name(name: str, type_: str, parent_names: dict[str, str] | None) -> bool:
+            return not (type_ == "table" and name in FTS_TABLE_NAMES)
+
+        def include_object(
+            obj: Any, name: str, type_: str, reflected: bool, compare_to: Any | None
+        ) -> bool:
+            return not (type_ == "table" and name in FTS_TABLE_NAMES)
 
         context.configure(
             connection=connection,
@@ -152,6 +147,7 @@ def run_migrations_online() -> None:
             compare_type=True,
             compare_server_default=True,
             render_as_batch=connection.dialect.name == "sqlite",
+            include_name=include_name,
             include_object=include_object,
         )
 

@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 from dotenv import load_dotenv, set_key
 from websockets import Subprotocol
+from websockets.exceptions import ConnectionClosedError
 from websockets.sync.client import connect
 
 logger = logging.getLogger(__name__)
@@ -34,17 +35,36 @@ def get_bitcraft_token(save_token: bool = True) -> str | None:
         return BITCRAFT_TOKEN
 
     try:
-        r = httpx.post(f"https://api.bitcraftonline.com/authentication/request-access-code?email={BITCRAFT_EMAIL}")
+        httpx.post(
+            f"https://api.bitcraftonline.com/authentication/request-access-code?email={BITCRAFT_EMAIL}",
+        )
         code = input("Wait for an email and enter the code:")
-        r = httpx.post(f"https://api.bitcraftonline.com/authentication/authenticate?email={BITCRAFT_EMAIL}&accessCode={code}")
+        r = httpx.post(
+            "https://api.bitcraftonline.com/authentication/authenticate",
+            params={"email": BITCRAFT_EMAIL, "accessCode": code},
+        )
         token_data = r.json()
 
+        token: str | None = None
+        if isinstance(token_data, str):
+            token = token_data
+        elif isinstance(token_data, dict):
+            # Try common keys
+            for key in ("token", "accessToken", "access_token", "jwt", "id_token"):
+                if key in token_data and isinstance(token_data[key], str):
+                    token = token_data[key]
+                    break
+
+        if token is None:
+            logger.error("BitCraft auth response didn't contain a token string")
+            return None
+
         if save_token:
-            save_to_env("BITCRAFT_TOKEN", token_data)
+            save_to_env("BITCRAFT_TOKEN", token)
 
-        return token_data
+        return token
 
-    except:
+    except Exception:
         logger.exception("Failed to get BitCraft token")
         return None
 
@@ -56,15 +76,39 @@ def execute_query(query: str) -> dict | None:
         return None
 
     proto = Subprotocol("v1.json.spacetimedb")
-    with connect(BITCRAFT_WSS_URL, additional_headers={"Authorization": "Bearer " + bc_token}, subprotocols=[proto], max_size=None, max_queue=None) as ws:
-        ws.recv()
-        sub = json.dumps(dict(Subscribe=dict(request_id=1, query_strings=[query])))
-        ws.send(sub)
-        for msg in ws:
-            data = json.loads(msg)
-            break
-        ws.close()
-    return data
+    try:
+        with connect(
+            BITCRAFT_WSS_URL,
+            additional_headers={"Authorization": "Bearer " + bc_token},
+            subprotocols=[proto],
+            max_size=None,
+            max_queue=None,
+        ) as ws:
+            try:
+                ws.recv()
+            except ConnectionClosedError:
+                logger.error("WebSocket closed while waiting for initial server frame")
+                return None
+
+            sub = json.dumps(dict(Subscribe=dict(request_id=1, query_strings=[query])))
+            ws.send(sub)
+            data = None
+            try:
+                for msg in ws:
+                    data = json.loads(msg)
+                    break
+            except ConnectionClosedError:
+                logger.error("WebSocket closed before receiving data for query: %s", query)
+                return None
+            finally:
+                try:
+                    ws.close()
+                except Exception:
+                    pass
+        return data
+    except Exception:
+        logger.exception("Failed to execute BitCraft query over WebSocket")
+        return None
 
 
 def subscribe_to_query(query: str) -> None:
