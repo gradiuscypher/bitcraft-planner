@@ -2,10 +2,11 @@
 Crafting planner for Bitcraft Online
 
 # Feedback
-- Buildings/Cargo are not loading?
 
 # Working on
+- Need to come up with a quicker way of indexing buildings - maybe fetch all building nicknames first and add to ORM
 - Clean up TODO
+- Buildings/Cargo are not loading
 - Proof of concept to pay for web service with Market Stall?
 - Provide filters for items (tiers, completed, future - filter by related skills of your character)
 - highlight items that are crafted vs gathered in the project list?
