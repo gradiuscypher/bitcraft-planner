@@ -120,15 +120,30 @@ class ApiService {
 
   // Individual item fetch methods
   async getItem(itemId: number): Promise<ItemDetail> {
-    return this.makeRequest<ItemDetail>(`/items/${itemId}`)
+    const response = await this.makeRequest<any>(`/items/${itemId}`)
+    // Map item_id to id for consistency with frontend interface
+    return {
+      ...response,
+      id: response.item_id || response.id,
+    }
   }
 
   async getBuilding(buildingId: number): Promise<BuildingDetail> {
-    return this.makeRequest<BuildingDetail>(`/buildings/${buildingId}`)
+    const response = await this.makeRequest<any>(`/buildings/${buildingId}`)
+    // Map building_id to id for consistency with frontend interface
+    return {
+      ...response,
+      id: response.building_id || response.id,
+    }
   }
 
   async getCargo(cargoId: number): Promise<CargoDetail> {
-    return this.makeRequest<CargoDetail>(`/cargo/${cargoId}`)
+    const response = await this.makeRequest<any>(`/cargo/${cargoId}`)
+    // Map cargo_id to id for consistency with frontend interface
+    return {
+      ...response,
+      id: response.cargo_id || response.id,
+    }
   }
 
   async getItemRecipe(itemId: number): Promise<Recipe[]> {

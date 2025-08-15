@@ -104,6 +104,15 @@ class ProjectsService {
 
   // Add item to project
   async addItemToProject(projectId: number, itemId: number, amount: number, itemType = 'item'): Promise<ProjectWithItems> {
+    // Validate inputs
+    if (itemId === undefined || itemId === null || isNaN(itemId)) {
+      throw new Error(`Invalid itemId: ${itemId}`);
+    }
+    
+    if (projectId === undefined || projectId === null || isNaN(projectId)) {
+      throw new Error(`Invalid projectId: ${projectId}`);
+    }
+    
     return this.makeRequest<ProjectWithItems>(`${API_ENDPOINTS.PROJECTS_BY_ID(projectId)}/items`, {
       method: 'POST',
       body: JSON.stringify({
