@@ -207,7 +207,7 @@ export function SearchDropdown({ onSearch, onSelectItem }: SearchDropdownProps) 
 
       {/* Search Results Dropdown */}
       {isOpen && query.length >= 2 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-50 max-h-96 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-[9999] max-h-96 overflow-y-auto">
           {loading && query.length >= 2 ? (
             <div className="p-4 text-center text-muted-foreground">
               <Search className="h-4 w-4 animate-spin mx-auto mb-2" />

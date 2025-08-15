@@ -174,7 +174,7 @@ function App() {
         <Router>
           <div className="min-h-screen bg-background">
             {/* Top Navbar */}
-            <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 text-foreground">
+            <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 text-foreground relative z-10">
               <div className="flex h-16 items-center px-6">
                 {/* Left Side - Logo and Navigation Links */}
                 <div className="flex items-center space-x-6">

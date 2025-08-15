@@ -20,6 +20,7 @@ Routes for projects
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -36,8 +37,15 @@ from models.projects import (
 )
 from models.users import UserGroupOrm, UserOrm
 from routes.auth import get_current_user
+from routes.items import calculate_recipe_tree_by_item, RecipeTreeItem
 
 projects = APIRouter(prefix="/projects", tags=["projects"])
+
+
+class ProjectRawMaterialsResponse(BaseModel):
+    project_id: int
+    project_name: str
+    base_materials: list[RecipeTreeItem]
 
 
 # Regular project endpoints
@@ -403,3 +411,76 @@ async def remove_project_from_user(
     user_id: int, project_id: int, current_user: UserOrm = Depends(get_current_user),
 ):
     return {"message": "Hello, World!"}
+
+
+@projects.get("/{project_id}/raw-materials")
+async def get_project_raw_materials(
+    project_id: int,
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> ProjectRawMaterialsResponse:
+    """Calculate all raw materials needed for all items in a project"""
+    result = await db.execute(
+        select(ProjectOrm)
+        .where(ProjectOrm.id == project_id)
+        .options(
+            selectinload(ProjectOrm.items).selectinload(ProjectItemOrm.item),
+            selectinload(ProjectOrm.group).selectinload(UserGroupOrm.user_memberships),
+        ),
+    )
+    project = result.scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not project.does_user_have_access(current_user.id):
+        raise HTTPException(
+            status_code=403, detail="You do not have access to this project",
+        )
+
+    # Calculate raw materials for all project items
+    all_base_materials: dict[int, RecipeTreeItem] = {}
+
+    for project_item in project.items:
+        # Calculate materials needed for remaining items (target - completed)
+        remaining_needed = max(0, project_item.target_count - project_item.count)
+
+        # Skip items that are already completed
+        if remaining_needed <= 0:
+            continue
+        try:
+            _, base_materials = await calculate_recipe_tree_by_item(
+                project_item.item_id,
+                remaining_needed,
+            )
+
+            # Merge materials (sum amounts for same items)
+            for material in base_materials:
+                if material.item_id in all_base_materials:
+                    all_base_materials[material.item_id].amount += material.amount
+                else:
+                    all_base_materials[material.item_id] = RecipeTreeItem(
+                        item_id=material.item_id,
+                        item_name=material.item_name,
+                        amount=material.amount,
+                        is_base_material=True,
+                    )
+        except (HTTPException, ValueError, KeyError):
+            # If recipe calculation fails for an item, treat it as a base material
+            all_base_materials[project_item.item_id] = RecipeTreeItem(
+                item_id=project_item.item_id,
+                item_name=project_item.name,
+                amount=remaining_needed,
+                is_base_material=True,
+            )
+
+    # Convert to sorted list
+    sorted_materials = sorted(
+        all_base_materials.values(),
+        key=lambda x: x.item_name.lower(),
+    )
+
+    return ProjectRawMaterialsResponse(
+        project_id=project.id,
+        project_name=project.name,
+        base_materials=sorted_materials,
+    )

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -70,7 +70,7 @@ export function AddToProject({ itemId, itemName, itemType, trigger, onSuccess }:
     }
   };
 
-  const handleAddToProject = async () => {
+  const handleAddToProject = async (navigateToProject: boolean = false) => {
     if (!selectedProjectId || !amount) return;
 
     const numAmount = parseInt(amount);
@@ -95,8 +95,10 @@ export function AddToProject({ itemId, itemName, itemType, trigger, onSuccess }:
         onSuccess();
       }
       
-      // Redirect to the project detail page
-      navigate(`/projects/${selectedProjectId}`);
+      // Only navigate to project if requested
+      if (navigateToProject) {
+        navigate(`/projects/${selectedProjectId}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add item to project');
       console.error('Failed to add item to project:', err);
@@ -122,7 +124,7 @@ export function AddToProject({ itemId, itemName, itemType, trigger, onSuccess }:
       <DialogTrigger asChild>
         {trigger || defaultTrigger}
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add to Project</DialogTitle>
           <DialogDescription>
@@ -196,7 +198,7 @@ export function AddToProject({ itemId, itemName, itemType, trigger, onSuccess }:
         )}
 
         {projects.length > 0 && (
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-2">
             <Button
               variant="outline"
               onClick={() => setIsOpen(false)}
@@ -205,7 +207,8 @@ export function AddToProject({ itemId, itemName, itemType, trigger, onSuccess }:
               Cancel
             </Button>
             <Button
-              onClick={handleAddToProject}
+              variant="outline"
+              onClick={() => handleAddToProject(false)}
               disabled={!selectedProjectId || !amount || adding}
             >
               {adding ? (
@@ -217,6 +220,23 @@ export function AddToProject({ itemId, itemName, itemType, trigger, onSuccess }:
                 <>
                   <Plus className="h-4 w-4 mr-2" />
                   Add to Project
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={() => handleAddToProject(true)}
+              disabled={!selectedProjectId || !amount || adding}
+            >
+              {adding ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-1" />
+                  <ArrowRight className="h-4 w-4" />
+                  Add and Go
                 </>
               )}
             </Button>

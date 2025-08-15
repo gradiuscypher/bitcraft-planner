@@ -49,10 +49,11 @@ import {
   TableCell,
   TableCaption,
 } from '@/components/ui/table';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ProtectedRoute } from '@/components/protected-route';
 import type { ProjectWithItems, ProjectItem } from '@/types/projects';
-import { ProjectItemIngredients } from '@/components/project-item-ingredients'
+import { ProjectItemIngredients } from '@/components/project-item-ingredients';
+import { ProjectRawMaterials, invalidateRawMaterialsCache } from '@/components/project-raw-materials';
 
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -74,6 +75,8 @@ export function ProjectDetailPage() {
     }
   });
   const [expandedItemIds, setExpandedItemIds] = useState<Set<number>>(new Set());
+  const [activeTab, setActiveTab] = useState<'items' | 'raw-materials'>('items');
+  const [rawMaterialsRefreshTrigger, setRawMaterialsRefreshTrigger] = useState<number>(0);
   const [sortKey, setSortKey] = useState<'name' | 'tier' | 'progress'>(() => {
     if (!projectId) return 'name'
     try {
@@ -267,6 +270,11 @@ export function ProjectDetailPage() {
       });
       await Promise.all(updates);
       setPendingCounts({});
+      
+      // Invalidate raw materials cache and trigger refresh
+      invalidateRawMaterialsCache(project.id);
+      setRawMaterialsRefreshTrigger(prev => prev + 1);
+      
       await refreshProject();
     } catch (err) {
       console.error('Failed to save count changes:', err);
@@ -341,6 +349,11 @@ export function ProjectDetailPage() {
     
     try {
       await projectsService.removeItemFromProject(project.id, itemId);
+      
+      // Invalidate raw materials cache and trigger refresh
+      invalidateRawMaterialsCache(project.id);
+      setRawMaterialsRefreshTrigger(prev => prev + 1);
+      
       refreshProject(); // Refresh to get updated data
     } catch (err) {
       console.error('Failed to remove item from project:', err);
@@ -520,7 +533,7 @@ export function ProjectDetailPage() {
             </Card>
           </div>
 
-          {/* Items List */}
+          {/* Items List with Tabs */}
           <div className="lg:col-span-3">
             <Card>
               <CardHeader>
@@ -528,34 +541,42 @@ export function ProjectDetailPage() {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <Package className="h-5 w-5" />
-                      Project Items ({project.items?.length || 0})
+                      Project Content
                     </CardTitle>
                     <CardDescription>
-                      Items to craft for this project
+                      View project items and required raw materials
                     </CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={hideCompleted ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setHideCompleted(v => !v)}
-                      className="flex items-center gap-2"
-                    >
-                      <Filter className="h-4 w-4" />
-                      {hideCompleted ? 'Showing Incomplete' : 'Hide Completed'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCollapseAllSignal((n) => n + 1)}
-                    >
-                      Collapse all
-                    </Button>
-                  </div>
+                  {activeTab === 'items' && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant={hideCompleted ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setHideCompleted(v => !v)}
+                        className="flex items-center gap-2"
+                      >
+                        <Filter className="h-4 w-4" />
+                        {hideCompleted ? 'Showing Incomplete' : 'Hide Completed'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCollapseAllSignal((n) => n + 1)}
+                      >
+                        Collapse all
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
-                {!project.items || project.items.length === 0 ? (
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'items' | 'raw-materials')}>
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="items">Project Items ({project.items?.length || 0})</TabsTrigger>
+                    <TabsTrigger value="raw-materials">All Raw Project Items</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="items">
+                    {!project.items || project.items.length === 0 ? (
                   <div className="text-center py-8">
                     <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                       <Package className="h-8 w-8 text-muted-foreground" />
@@ -913,6 +934,14 @@ export function ProjectDetailPage() {
                     </Table>
                   </div>
                 )}
+                  </TabsContent>
+                  <TabsContent value="raw-materials">
+                    <ProjectRawMaterials 
+                      projectId={project.id} 
+                      refreshTrigger={rawMaterialsRefreshTrigger}
+                    />
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </div>
