@@ -1,11 +1,12 @@
-from datetime import UTC, datetime
+import uuid
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String, delete, select
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from database import Base
 
@@ -155,6 +156,9 @@ class UserGroupOrm(Base):
     user_memberships: Mapped[list["UserGroupMembership"]] = relationship(
         "UserGroupMembership", back_populates="user_group",
     )
+    invites: Mapped[list["UserGroupInviteOrm"]] = relationship(
+        "UserGroupInviteOrm", back_populates="user_group",
+    )
 
     @property
     def users(self) -> list[UserOrm]:
@@ -182,3 +186,123 @@ class UserGroupOrm(Base):
     def can_user_manage_group_projects(self, user_id: int) -> bool:
         """Check if user can manage (modify) group projects"""
         return self.is_user_owner_or_co_owner(user_id)
+
+
+class UserGroupInviteOrm(Base):
+    __tablename__ = "user_group_invites"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_group_id: Mapped[int] = mapped_column(ForeignKey("user_groups.id"), nullable=False)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(UTC))
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    invite_code: Mapped[str] = mapped_column(String(255), nullable=False)
+    user_group: Mapped["UserGroupOrm"] = relationship("UserGroupOrm", back_populates="invites")
+
+    @staticmethod
+    def generate_invite_code() -> str:
+        return str(uuid.uuid4())
+
+    @classmethod
+    def create_invite(
+        cls,
+        db: Session,
+        user_group_id: int,
+        owner_id: int,
+        expires_in_days: int = 7,
+    ) -> "UserGroupInviteOrm":
+        """Create a new invite for a user group"""
+        invite = cls(
+            user_group_id=user_group_id,
+            owner_id=owner_id,
+            expires_at=datetime.now(UTC) + timedelta(days=expires_in_days),
+            invite_code=cls.generate_invite_code(),
+        )
+        db.add(invite)
+        db.commit()
+        db.refresh(invite)
+        return invite
+
+    def is_expired(self) -> bool:
+        """Check if the invite has expired"""
+        return datetime.now(UTC) > self.expires_at
+
+    def is_valid(self) -> bool:
+        """Check if the invite is valid (not expired)"""
+        return not self.is_expired()
+
+    @classmethod
+    def get_valid_invite_by_code(
+        cls,
+        db: Session,
+        invite_code: str,
+    ) -> Optional["UserGroupInviteOrm"]:
+        """Get a valid invite by its code"""
+        stmt = select(cls).where(cls.invite_code == invite_code)
+        invite = db.execute(stmt).scalar_one_or_none()
+
+        if invite and invite.is_valid():
+            return invite
+        return None
+
+    @classmethod
+    def cleanup_expired_invites(cls, db: Session) -> int:
+        """Delete all expired invites and return count of deleted invites"""
+        stmt = delete(cls).where(cls.expires_at < datetime.now(UTC))
+        result = db.execute(stmt)
+        db.commit()
+        return result.rowcount
+
+    def use_invite(self, db: Session, user_id: int) -> bool:
+        """
+        Use the invite to add a user to the group.
+        Returns True if successful, False if failed.
+        """
+        if not self.is_valid():
+            return False
+
+        # Check if user is already in the group
+        if self.user_group.is_user_in_group(user_id):
+            return False
+
+        # Add user to the group
+        membership = UserGroupMembership(
+            user_id=user_id,
+            user_group_id=self.user_group_id,
+            role=GroupMemberRole.MEMBER,
+        )
+        db.add(membership)
+
+        # Delete the invite after use (single use)
+        db.delete(self)
+        db.commit()
+
+        return True
+
+    @classmethod
+    def delete_invite(cls, db: Session, invite_id: int, owner_id: int) -> bool:
+        """
+        Delete an invite. Only the invite owner can delete it.
+        Returns True if successful, False if failed.
+        """
+        stmt = select(cls).where(cls.id == invite_id)
+        invite = db.execute(stmt).scalar_one_or_none()
+
+        if not invite or invite.owner_id != owner_id:
+            return False
+
+        db.delete(invite)
+        db.commit()
+        return True
+
+    @classmethod
+    def get_group_invites(cls, db: Session, user_group_id: int) -> list["UserGroupInviteOrm"]:
+        """Get all invites for a specific user group"""
+        stmt = select(cls).where(cls.user_group_id == user_group_id)
+        return list(db.execute(stmt).scalars().all())
+
+    @classmethod
+    def get_user_invites(cls, db: Session, owner_id: int) -> list["UserGroupInviteOrm"]:
+        """Get all invites created by a specific user"""
+        stmt = select(cls).where(cls.owner_id == owner_id)
+        return list(db.execute(stmt).scalars().all())

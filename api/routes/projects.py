@@ -37,7 +37,7 @@ from models.projects import (
 )
 from models.users import UserGroupOrm, UserOrm
 from routes.auth import get_current_user
-from routes.items import calculate_recipe_tree_by_item, RecipeTreeItem
+from routes.items import RecipeTreeItem, calculate_recipe_tree_by_item
 
 projects = APIRouter(prefix="/projects", tags=["projects"])
 
