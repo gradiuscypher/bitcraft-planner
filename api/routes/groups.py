@@ -413,7 +413,7 @@ async def create_group_invite(
         )
 
     # Create the invite
-    invite = UserGroupInviteOrm.create_invite(
+    invite = await UserGroupInviteOrm.create_invite(
         db=db,
         user_group_id=group_id,
         owner_id=current_user.id,
@@ -449,7 +449,7 @@ async def list_group_invites(
         )
 
     # Get all invites for the group
-    invites = UserGroupInviteOrm.get_group_invites(db=db, user_group_id=group_id)
+    invites = await UserGroupInviteOrm.get_group_invites(db=db, user_group_id=group_id)
 
     return [
         InviteResponse(
@@ -472,7 +472,7 @@ async def join_group_with_invite(
     """Join a group using an invite code"""
 
     # Get the valid invite
-    invite = UserGroupInviteOrm.get_valid_invite_by_code(db=db, invite_code=invite_code)
+    invite = await UserGroupInviteOrm.get_valid_invite_by_code(db=db, invite_code=invite_code)
 
     if not invite:
         raise HTTPException(status_code=404, detail="Invalid or expired invite code")
@@ -481,13 +481,16 @@ async def join_group_with_invite(
     if invite.user_group.is_user_in_group(current_user.id):
         raise HTTPException(status_code=400, detail="You are already a member of this group")
 
+    # Capture group name before using the invite (which deletes it)
+    group_name = invite.user_group.name
+
     # Use the invite to join the group
-    success = invite.use_invite(db=db, user_id=current_user.id)
+    success = await invite.use_invite(db=db, user_id=current_user.id)
 
     if not success:
         raise HTTPException(status_code=400, detail="Failed to join group with invite")
 
-    return {"message": f"Successfully joined group '{invite.user_group.name}'"}
+    return {"message": f"Successfully joined group '{group_name}'"}
 
 
 @groups.delete("/invites/{invite_id}")
@@ -513,7 +516,7 @@ async def delete_group_invite(
         )
 
     # Delete the invite
-    success = UserGroupInviteOrm.delete_invite(
+    success = await UserGroupInviteOrm.delete_invite(
         db=db, invite_id=invite_id, owner_id=current_user.id,
     )
 
@@ -529,7 +532,7 @@ async def list_my_invites(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[InviteResponse]:
     """List all invites created by the current user"""
-    invites = UserGroupInviteOrm.get_user_invites(db=db, owner_id=current_user.id)
+    invites = await UserGroupInviteOrm.get_user_invites(db=db, owner_id=current_user.id)
 
     return [
         InviteResponse(

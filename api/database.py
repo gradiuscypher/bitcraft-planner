@@ -2,8 +2,8 @@ from collections.abc import AsyncGenerator
 from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import StaticPool
 
 from settings import ENVIRONMENT, LOGFIRE_TOKEN, EnvironmentEnum
 
@@ -77,6 +77,7 @@ async def init_database() -> None:
     )
     from models.projects import ProjectItemOrm, ProjectOrm  # noqa: F401, PLC0415
     from models.users import (  # noqa: F401, PLC0415
+        UserGroupInviteOrm,
         UserGroupMembership,
         UserGroupOrm,
         UserOrm,

@@ -4,6 +4,7 @@ Crafting planner for Bitcraft Online
 # Feedback
 
 # Working on
+- User needs to leave group
 - Need to come up with a quicker way of indexing buildings - maybe fetch all building nicknames first and add to ORM
 - Clean up TODO
 - Buildings/Cargo are not loading

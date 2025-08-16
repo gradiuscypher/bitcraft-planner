@@ -49,6 +49,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import { ProtectedRoute } from '@/components/protected-route';
+import { GroupInviteManagement } from '@/components/group-invite-management';
 import type { GroupWithDetails, BasicUserWithRole } from '@/types/groups';
 import type { ProjectWithItems } from '@/types/projects';
 import { Label } from '@/components/ui/label';
@@ -532,6 +533,15 @@ export function GroupDetailPage() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Invite Management Section */}
+        <div className="mt-8">
+          <GroupInviteManagement 
+            groupId={group.id}
+            groupName={group.name}
+            canManageInvites={group.can_create_projects || false}
+          />
         </div>
       </div>
 

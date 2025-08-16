@@ -21,6 +21,13 @@ export const API_ENDPOINTS = {
   GROUPS_PROMOTE_USER: (groupId: number, discordId: string) => `/groups/${groupId}/co-owners/${discordId}`,
   GROUPS_DEMOTE_USER: (groupId: number, discordId: string) => `/groups/${groupId}/co-owners/${discordId}`,
   
+  // Group invite endpoints
+  GROUPS_CREATE_INVITE: (groupId: number) => `/groups/${groupId}/invites`,
+  GROUPS_LIST_INVITES: (groupId: number) => `/groups/${groupId}/invites`,
+  GROUPS_DELETE_INVITE: (inviteId: number) => `/groups/invites/${inviteId}`,
+  GROUPS_JOIN_INVITE: (inviteCode: string) => `/groups/invites/${inviteCode}/join`,
+  GROUPS_MY_INVITES: '/groups/invites/my',
+  
   // Projects endpoints
   PROJECTS: '/projects/',
   PROJECTS_BY_ID: (id: number) => `/projects/${id}`,

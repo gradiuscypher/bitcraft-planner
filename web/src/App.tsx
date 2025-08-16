@@ -48,6 +48,7 @@ import { LoginPage } from '@/pages/login'
 import { AuthCallback } from '@/pages/auth-callback'
 import { GroupsPage } from '@/pages/groups'
 import { GroupDetailPage } from '@/pages/group-detail'
+import { JoinGroupPage } from '@/pages/join-group'
 import { ProjectsPage } from '@/pages/projects'
 import { ProjectDetailPage } from '@/pages/project-detail'
 import { ProtectedRoute } from '@/components/protected-route'
@@ -231,6 +232,7 @@ function App() {
               <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
               <Route path="/groups" element={<ProtectedRoute><GroupsPage /></ProtectedRoute>} />
               <Route path="/groups/:groupId" element={<ProtectedRoute><GroupDetailPage /></ProtectedRoute>} />
+              <Route path="/join-group/:inviteCode" element={<ProtectedRoute><JoinGroupPage /></ProtectedRoute>} />
             </Routes>
           </div>
         </Router>

@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Plus, Users, Settings, Trash2, UserPlus, UserMinus, Calendar, Crown, FolderOpen } from 'lucide-react';
 import { ProtectedRoute } from '@/components/protected-route';
+import { MyInvites } from '@/components/my-invites';
 import type { UserGroup } from '@/types/groups';
 
 export function GroupsPage() {
@@ -209,14 +210,16 @@ export function GroupsPage() {
             </p>
           </div>
 
-          {/* Create Group Button */}
-          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Create Group
-              </Button>
-            </DialogTrigger>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <MyInvites />
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Group
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create New Group</DialogTitle>
@@ -259,6 +262,7 @@ export function GroupsPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Add Member Dialog */}

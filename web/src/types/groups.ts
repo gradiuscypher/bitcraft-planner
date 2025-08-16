@@ -49,4 +49,20 @@ export interface GroupWithMembers extends UserGroup {
 
 export interface GroupWithDetails extends UserGroup {
   users: BasicUserWithRole[];
+}
+
+export interface GroupInvite {
+  id: number;
+  invite_code: string;
+  created_at: string;
+  expires_at: string;
+  owner_id: number;
+}
+
+export interface CreateInviteRequest {
+  expires_in_days?: number;
+}
+
+export interface JoinInviteResponse {
+  message: string;
 } 

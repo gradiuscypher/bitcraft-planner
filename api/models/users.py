@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Optional
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import DateTime, ForeignKey, String, delete, select
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
+from sqlalchemy.orm import Mapped, Session, mapped_column, relationship, selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import Base
 
@@ -204,9 +205,9 @@ class UserGroupInviteOrm(Base):
         return str(uuid.uuid4())
 
     @classmethod
-    def create_invite(
+    async def create_invite(
         cls,
-        db: Session,
+        db: AsyncSession,
         user_group_id: int,
         owner_id: int,
         expires_in_days: int = 7,
@@ -219,27 +220,37 @@ class UserGroupInviteOrm(Base):
             invite_code=cls.generate_invite_code(),
         )
         db.add(invite)
-        db.commit()
-        db.refresh(invite)
+        await db.commit()
+        await db.refresh(invite)
         return invite
 
     def is_expired(self) -> bool:
         """Check if the invite has expired"""
-        return datetime.now(UTC) > self.expires_at
+        # Ensure both datetimes are timezone-aware for comparison
+        current_time = datetime.now(UTC)
+        expires_time = self.expires_at
+
+        # If expires_at is timezone-naive, assume it's in UTC
+        if expires_time.tzinfo is None:
+            expires_time = expires_time.replace(tzinfo=UTC)
+        return current_time > expires_time
 
     def is_valid(self) -> bool:
         """Check if the invite is valid (not expired)"""
         return not self.is_expired()
 
     @classmethod
-    def get_valid_invite_by_code(
+    async def get_valid_invite_by_code(
         cls,
-        db: Session,
+        db: AsyncSession,
         invite_code: str,
     ) -> Optional["UserGroupInviteOrm"]:
         """Get a valid invite by its code"""
-        stmt = select(cls).where(cls.invite_code == invite_code)
-        invite = db.execute(stmt).scalar_one_or_none()
+        stmt = select(cls).where(cls.invite_code == invite_code).options(
+            selectinload(cls.user_group).selectinload(UserGroupOrm.user_memberships),
+        )
+        result = await db.execute(stmt)
+        invite = result.scalar_one_or_none()
 
         if invite and invite.is_valid():
             return invite
@@ -253,7 +264,7 @@ class UserGroupInviteOrm(Base):
         db.commit()
         return result.rowcount
 
-    def use_invite(self, db: Session, user_id: int) -> bool:
+    async def use_invite(self, db: AsyncSession, user_id: int) -> bool:
         """
         Use the invite to add a user to the group.
         Returns True if successful, False if failed.
@@ -275,34 +286,37 @@ class UserGroupInviteOrm(Base):
 
         # Delete the invite after use (single use)
         db.delete(self)
-        db.commit()
+        await db.commit()
 
         return True
 
     @classmethod
-    def delete_invite(cls, db: Session, invite_id: int, owner_id: int) -> bool:
+    async def delete_invite(cls, db: AsyncSession, invite_id: int, owner_id: int) -> bool:
         """
         Delete an invite. Only the invite owner can delete it.
         Returns True if successful, False if failed.
         """
         stmt = select(cls).where(cls.id == invite_id)
-        invite = db.execute(stmt).scalar_one_or_none()
+        result = await db.execute(stmt)
+        invite = result.scalar_one_or_none()
 
         if not invite or invite.owner_id != owner_id:
             return False
 
         db.delete(invite)
-        db.commit()
+        await db.commit()
         return True
 
     @classmethod
-    def get_group_invites(cls, db: Session, user_group_id: int) -> list["UserGroupInviteOrm"]:
+    async def get_group_invites(cls, db: AsyncSession, user_group_id: int) -> list["UserGroupInviteOrm"]:
         """Get all invites for a specific user group"""
         stmt = select(cls).where(cls.user_group_id == user_group_id)
-        return list(db.execute(stmt).scalars().all())
+        result = await db.execute(stmt)
+        return list(result.scalars().all())
 
     @classmethod
-    def get_user_invites(cls, db: Session, owner_id: int) -> list["UserGroupInviteOrm"]:
+    async def get_user_invites(cls, db: AsyncSession, owner_id: int) -> list["UserGroupInviteOrm"]:
         """Get all invites created by a specific user"""
         stmt = select(cls).where(cls.owner_id == owner_id)
-        return list(db.execute(stmt).scalars().all())
+        result = await db.execute(stmt)
+        return list(result.scalars().all())

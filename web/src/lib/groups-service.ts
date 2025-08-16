@@ -1,6 +1,6 @@
 import { authService } from './auth-service';
 import { API_BASE_URL, API_ENDPOINTS } from './config';
-import type { UserGroup, GroupWithDetails } from '@/types/groups';
+import type { UserGroup, GroupWithDetails, GroupInvite, CreateInviteRequest, JoinInviteResponse } from '@/types/groups';
 
 class GroupsService {
   // Helper method for making authenticated API requests
@@ -122,6 +122,40 @@ class GroupsService {
     return this.makeRequest<void>(API_ENDPOINTS.GROUPS_DEMOTE_USER(groupId, discordId), {
       method: 'DELETE',
     });
+  }
+
+  // ============ Invite Management Methods ============
+
+  // Create an invite for a group
+  async createGroupInvite(groupId: number, request: CreateInviteRequest = {}): Promise<GroupInvite> {
+    return this.makeRequest<GroupInvite>(API_ENDPOINTS.GROUPS_CREATE_INVITE(groupId), {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  // Get all invites for a group
+  async getGroupInvites(groupId: number): Promise<GroupInvite[]> {
+    return this.makeRequest<GroupInvite[]>(API_ENDPOINTS.GROUPS_LIST_INVITES(groupId));
+  }
+
+  // Delete an invite
+  async deleteGroupInvite(inviteId: number): Promise<{ message: string }> {
+    return this.makeRequest<{ message: string }>(API_ENDPOINTS.GROUPS_DELETE_INVITE(inviteId), {
+      method: 'DELETE',
+    });
+  }
+
+  // Join a group using an invite code
+  async joinGroupWithInvite(inviteCode: string): Promise<JoinInviteResponse> {
+    return this.makeRequest<JoinInviteResponse>(API_ENDPOINTS.GROUPS_JOIN_INVITE(inviteCode), {
+      method: 'POST',
+    });
+  }
+
+  // Get all invites created by the current user
+  async getMyInvites(): Promise<GroupInvite[]> {
+    return this.makeRequest<GroupInvite[]>(API_ENDPOINTS.GROUPS_MY_INVITES);
   }
 }
 
