@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,6 +14,7 @@ from models.users import (
     BasicUserWithRole,
     GroupMemberRole,
     UserGroup,
+    UserGroupInviteOrm,
     UserGroupMembership,
     UserGroupOrm,
     UserGroupWithRoles,
@@ -376,3 +378,166 @@ async def demote_co_owner_to_member(
 
     membership.role = GroupMemberRole.MEMBER
     await db.commit()
+
+
+class CreateInviteRequest(BaseModel):
+    expires_in_days: int = 7
+
+
+class InviteResponse(BaseModel):
+    id: int
+    invite_code: str
+    created_at: datetime
+    expires_at: datetime
+    owner_id: int
+
+
+@groups.post("/{group_id}/invites")
+async def create_group_invite(
+    group_id: int,
+    invite_data: CreateInviteRequest,
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> InviteResponse:
+    """Create a new invite for a user group (only owner/co-owners can create invites)"""
+    result = await db.execute(select(UserGroupOrm).where(UserGroupOrm.id == group_id))
+    target_group = result.scalar_one_or_none()
+
+    if not target_group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    # Check if user can create invites (owner or co-owner)
+    if not target_group.is_user_owner_or_co_owner(current_user.id):
+        raise HTTPException(
+            status_code=403, detail="Only group owners and co-owners can create invites",
+        )
+
+    # Create the invite
+    invite = UserGroupInviteOrm.create_invite(
+        db=db,
+        user_group_id=group_id,
+        owner_id=current_user.id,
+        expires_in_days=invite_data.expires_in_days,
+    )
+
+    return InviteResponse(
+        id=invite.id,
+        invite_code=invite.invite_code,
+        created_at=invite.created_at,
+        expires_at=invite.expires_at,
+        owner_id=invite.owner_id,
+    )
+
+
+@groups.get("/{group_id}/invites")
+async def list_group_invites(
+    group_id: int,
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[InviteResponse]:
+    """List all invites for a user group (only owner/co-owners can view invites)"""
+    result = await db.execute(select(UserGroupOrm).where(UserGroupOrm.id == group_id))
+    target_group = result.scalar_one_or_none()
+
+    if not target_group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    # Check if user can view invites (owner or co-owner)
+    if not target_group.is_user_owner_or_co_owner(current_user.id):
+        raise HTTPException(
+            status_code=403, detail="Only group owners and co-owners can view invites",
+        )
+
+    # Get all invites for the group
+    invites = UserGroupInviteOrm.get_group_invites(db=db, user_group_id=group_id)
+
+    return [
+        InviteResponse(
+            id=invite.id,
+            invite_code=invite.invite_code,
+            created_at=invite.created_at,
+            expires_at=invite.expires_at,
+            owner_id=invite.owner_id,
+        )
+        for invite in invites
+    ]
+
+
+@groups.post("/invites/{invite_code}/join")
+async def join_group_with_invite(
+    invite_code: str,
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, str]:
+    """Join a group using an invite code"""
+
+    # Get the valid invite
+    invite = UserGroupInviteOrm.get_valid_invite_by_code(db=db, invite_code=invite_code)
+
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invalid or expired invite code")
+
+    # Check if user is already in the group
+    if invite.user_group.is_user_in_group(current_user.id):
+        raise HTTPException(status_code=400, detail="You are already a member of this group")
+
+    # Use the invite to join the group
+    success = invite.use_invite(db=db, user_id=current_user.id)
+
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to join group with invite")
+
+    return {"message": f"Successfully joined group '{invite.user_group.name}'"}
+
+
+@groups.delete("/invites/{invite_id}")
+async def delete_group_invite(
+    invite_id: int,
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, str]:
+    """Delete a group invite (only the invite creator can delete it)"""
+    # Get the invite
+    invite_result = await db.execute(
+        select(UserGroupInviteOrm).where(UserGroupInviteOrm.id == invite_id),
+    )
+    invite = invite_result.scalar_one_or_none()
+
+    if not invite:
+        raise HTTPException(status_code=404, detail="Invite not found")
+
+    # Only the invite creator can delete it
+    if invite.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Only the invite creator can delete this invite",
+        )
+
+    # Delete the invite
+    success = UserGroupInviteOrm.delete_invite(
+        db=db, invite_id=invite_id, owner_id=current_user.id,
+    )
+
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to delete invite")
+
+    return {"message": "Invite deleted successfully"}
+
+
+@groups.get("/invites/my")
+async def list_my_invites(
+    current_user: Annotated[UserOrm, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[InviteResponse]:
+    """List all invites created by the current user"""
+    invites = UserGroupInviteOrm.get_user_invites(db=db, owner_id=current_user.id)
+
+    return [
+        InviteResponse(
+            id=invite.id,
+            invite_code=invite.invite_code,
+            created_at=invite.created_at,
+            expires_at=invite.expires_at,
+            owner_id=invite.owner_id,
+        )
+        for invite in invites
+    ]
