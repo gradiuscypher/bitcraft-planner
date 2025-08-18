@@ -400,7 +400,11 @@ async def create_group_invite(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> InviteResponse:
     """Create a new invite for a user group (only owner/co-owners can create invites)"""
-    result = await db.execute(select(UserGroupOrm).where(UserGroupOrm.id == group_id))
+    result = await db.execute(
+        select(UserGroupOrm)
+        .options(selectinload(UserGroupOrm.user_memberships))
+        .where(UserGroupOrm.id == group_id),
+    )
     target_group = result.scalar_one_or_none()
 
     if not target_group:
@@ -436,7 +440,11 @@ async def list_group_invites(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[InviteResponse]:
     """List all invites for a user group (only owner/co-owners can view invites)"""
-    result = await db.execute(select(UserGroupOrm).where(UserGroupOrm.id == group_id))
+    result = await db.execute(
+        select(UserGroupOrm)
+        .options(selectinload(UserGroupOrm.user_memberships))
+        .where(UserGroupOrm.id == group_id),
+    )
     target_group = result.scalar_one_or_none()
 
     if not target_group:
