@@ -5,8 +5,11 @@ Crafting planner for Bitcraft Online
 
 # Working on
 - User needs to leave group
+- Need to fix deleting groups
 - Need to come up with a quicker way of indexing buildings - maybe fetch all building nicknames first and add to ORM
 - Clean up TODO
+
+# Backlog Sorted
 - Buildings/Cargo are not loading
 - Proof of concept to pay for web service with Market Stall?
 - Provide filters for items (tiers, completed, future - filter by related skills of your character)
@@ -27,15 +30,12 @@ Crafting planner for Bitcraft Online
 - Get the skill names from JSON as well so that we can present them in the recipes
 - Add item icons (ref: https://github.com/BitCraftToolBox/brico/blob/4b2b58f66583f59988c825e9d4943cef85c6289c/frontend/src/lib/bitcraft-utils.ts#L117-L123)
 - Change site title
-- Add favicon
-
-# Backlog Sorted
 - Split files for API endpoints
 - crafting queues: let people register for specific classes that they can craft, and have a LFW / can work queue
 - can people create their own groups that individuals can be invited to for LFW queues
 
 # Backlog Unsorted
-- Metadata for unfurler
+- Turn API errors into friendly user errors
 - Explorer for other JSON data in the game files?
 - Some sort of game TODO list - eg "reach 20 in this skill". Can resolve dependencies, so if you need to have a level in something before crafting an item, it can put both on the list
 - LLM recommendations for what to do next? (lol idk sometimes i dont know what to do, it could be fun?)
