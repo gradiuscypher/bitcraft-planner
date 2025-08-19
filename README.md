@@ -1,7 +1,8 @@
 # bitcraft-planner
 Crafting planner for Bitcraft Online
 
-# Feedback
+# Feedback/Feature Request
+- Sub-projects: so that it's easier to organize big projects into smaller projects, but the progress feeds into the overall project as well
 
 # Working on
 - User needs to leave group
