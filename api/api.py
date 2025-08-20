@@ -15,6 +15,7 @@ from routes.cargo import cargo
 from routes.groups import groups
 from routes.items import items
 from routes.projects import projects
+from routes.user import user
 from settings import ENVIRONMENT, LOGFIRE_TOKEN, EnvironmentEnum
 
 logger = logging.getLogger(__name__)
@@ -131,6 +132,7 @@ app.include_router(cargo)
 app.include_router(items)
 app.include_router(groups)
 app.include_router(projects)
+app.include_router(user)
 
 if __name__ == "__main__":
     import uvicorn

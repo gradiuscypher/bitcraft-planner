@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Discord OAuth URLs
 DISCORD_OAUTH_BASE_URL = "https://discord.com/api/oauth2/authorize"
-DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token"
+DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token"  # noqa: S105
 DISCORD_USER_API_URL = "https://discord.com/api/users/@me"
 
 # JWT serializer for token management
@@ -178,8 +178,8 @@ async def get_current_user(
     return user
 
 
-@auth.get("/login", response_model=LoginResponse)
-async def login():
+@auth.get("/login")
+async def login() -> LoginResponse:
     """Initiate Discord OAuth login"""
     if not DISCORD_CLIENT_ID or not DISCORD_CLIENT_SECRET:
         raise HTTPException(
@@ -198,8 +198,8 @@ async def login():
     return LoginResponse(login_url=login_url)
 
 
-@auth.get("/callback", response_model=CallbackResponse)
-async def callback(code: str, db: Annotated[AsyncSession, Depends(get_db)]):
+@auth.get("/callback")
+async def callback(code: str, db: Annotated[AsyncSession, Depends(get_db)]) -> CallbackResponse:
     """Handle Discord OAuth callback"""
     if not code:
         raise HTTPException(
@@ -278,7 +278,7 @@ async def get_me(
 
 
 @auth.post("/logout")
-async def logout():
+async def logout() -> dict[str, str]:
     """Logout user (client should delete the token)"""
     return {"message": "Logout successful. Please delete your access token."}
 

@@ -5,9 +5,10 @@ Crafting planner for Bitcraft Online
 - Sub-projects: so that it's easier to organize big projects into smaller projects, but the progress feeds into the overall project as well
 
 # Working on
+- User syncing code in the user.py route
 - User needs to leave group
 - Need to fix deleting groups
-- Need to come up with a quicker way of indexing buildings - maybe fetch all building nicknames first and add to ORM
+- Do I need to save buildings/inventory/nicknames to the DB? Its a matter of seconds to get the updated version, maybe sync every 5 minutes?
 - Clean up TODO
 
 # Backlog Sorted

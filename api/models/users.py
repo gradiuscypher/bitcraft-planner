@@ -4,10 +4,10 @@ from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import DateTime, ForeignKey, String, delete, select
+from sqlalchemy import DateTime, ForeignKey, Integer, String, delete, select
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.orm import Mapped, Session, mapped_column, relationship, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Mapped, Session, mapped_column, relationship, selectinload
 
 from database import Base
 
@@ -68,6 +68,7 @@ class BasicUserWithRole(BaseModel):
     global_name: str | None = None
     avatar: str | None = None
     role: GroupMemberRole
+    game_user_id: int | None = None
 
 
 class User(BaseModel):
@@ -84,6 +85,7 @@ class User(BaseModel):
     updated_at: datetime
     groups: list["UserGroup"]
     owned_groups: list["UserGroup"]
+    game_user_id: int | None = None
 
 
 class UserOrm(Base):
@@ -102,7 +104,7 @@ class UserOrm(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC),
     )
-
+    game_user_id: Mapped[int] = mapped_column(Integer, nullable=True)
     group_memberships: Mapped[list["UserGroupMembership"]] = relationship(
         "UserGroupMembership", back_populates="user",
     )

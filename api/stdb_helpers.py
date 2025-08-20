@@ -210,6 +210,26 @@ def get_building_nicknames() -> dict | None:
     return nickname_list
 
 
+def get_user_list_by_id() -> dict | None:
+    result_list = {}
+    result = execute_query("SELECT * FROM player_username_state")
+    user_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
+    for user in user_list:
+        user_obj = json.loads(user)
+        result_list[user_obj["entity_id"]] = user_obj
+    return result_list
+
+
+def get_user_list_by_name() -> dict | None:
+    result_list = {}
+    result = execute_query("SELECT * FROM player_username_state")
+    user_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
+    for user in user_list:
+        user_obj = json.loads(user)
+        result_list[user_obj["username"]] = user_obj["entity_id"]
+    return result_list
+
+
 def get_user_id(username: str) -> dict | None:
     bc_token = get_bitcraft_token()
     if bc_token is None:
