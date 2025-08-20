@@ -164,37 +164,50 @@ def subscribe_to_query_generator(query: str) -> Generator[Any, None, None]:
                 pass  # Connection might already be closed
 
 
-def get_claim_id(claim_name: str) -> dict | None:
-    result = execute_query(f"SELECT * FROM claim_state where name =='{claim_name}'")
-    claim_id_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
+def get_claims() -> dict | None:
+    result_list: dict[int, dict] = {}
+    result = execute_query("SELECT * FROM claim_state")
+    claim_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
+    for claim in claim_list:
+        claim_obj = json.loads(claim)
+        result_list[claim_obj["entity_id"]] = claim_obj
+    return result_list
 
-    if claim_id_list:
-        return json.loads(claim_id_list[0])
-    return None
 
-
-def get_claim_buildings(claim_id: int) -> dict | None:
-    result = execute_query(f"SELECT * FROM building_state where claim_entity_id == {claim_id}")
+def get_claim_buildings() -> dict | None:
+    result_list: dict[int, list[dict]] = {}
+    result = execute_query("SELECT * FROM building_state")
     building_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
     if building_list:
-        return [json.loads(building) for building in building_list]
-    return None
+        for building in building_list:
+            building_obj = json.loads(building)
+            claim_id = building_obj["claim_entity_id"]
+
+            if claim_id not in result_list:
+                result_list[claim_id] = []
+            result_list[claim_id].append(building_obj)
+    return result_list
 
 
-def get_building_inventory(building_id: int) -> dict | None:
-    result = execute_query(f"SELECT * FROM inventory_state where owner_entity_id == {building_id}")
+def get_building_inventories() -> dict | None:
+    building_inventories: dict[int, dict] = {}
+    result = execute_query("SELECT * FROM inventory_state")
     inventory_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
-    if inventory_list:
-        return [json.loads(inventory) for inventory in inventory_list]
-    return None
+    for inventory in inventory_list:
+        inventory_obj = json.loads(inventory)
+        building_id = inventory_obj["owner_entity_id"]
+        building_inventories[building_id] = inventory_obj
+    return building_inventories
 
 
-def get_building_nickname(building_id: int) -> dict | None:
-    result = execute_query(f"SELECT * FROM building_nickname_state where entity_id == {building_id}")
-    nickname_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
-    if nickname_list:
-        return json.loads(nickname_list[0])["nickname"]
-    return None
+def get_building_nicknames() -> dict | None:
+    nickname_list = {}
+    result = execute_query(f"SELECT * FROM building_nickname_state")
+    result_list = result["InitialSubscription"]["database_update"]["tables"][0]["updates"][0]["inserts"]
+    if result_list:
+        for nickname in result_list:
+            nickname_list[json.loads(nickname)["entity_id"]] = json.loads(nickname)["nickname"]
+    return nickname_list
 
 
 def get_user_id(username: str) -> dict | None:

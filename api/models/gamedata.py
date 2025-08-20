@@ -7,7 +7,12 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
 
 from database import AsyncSession, Base, SessionLocal, init_database, reset_database
-from stdb_helpers import execute_query, get_building_inventory, get_building_nickname, get_claim_buildings
+from stdb_helpers import (
+    execute_query,
+    get_building_inventories,
+    get_building_nicknames,
+    get_claim_buildings,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -278,14 +283,24 @@ class GameClaimBuildingOrm(Base):
     )
 
     @staticmethod
+    async def index_all_claim_buildings() -> None:
+        async with SessionLocal() as session:
+            # Get all claim IDs from local ORM instead of external query
+            result = await session.execute(select(GameClaimOrm.claim_id))
+            claim_ids = result.scalars().all()
+            for claim_id in claim_ids:
+                await GameClaimBuildingOrm.index_claim_buildings(session, claim_id)
+
+    @staticmethod
     async def index_claim_buildings(session: AsyncSession, claim_id: int) -> None:
         result = get_claim_buildings(claim_id)
+        building_nicknames = get_building_nicknames()
         try:
             if not result:
                 return
             for building_obj in result:
                 print("Fetching building nickname for", building_obj["entity_id"])
-                building_nickname = get_building_nickname(building_obj["entity_id"])
+                building_nickname = building_nicknames.get(building_obj["entity_id"])
                 print("Building the ORM")
                 building_orm = GameClaimBuildingOrm(
                     claim_id=building_obj["claim_entity_id"],
@@ -347,30 +362,30 @@ class GameClaimBuildingInventoryOrm(Base):
         cascade="all, delete-orphan",
     )
 
-    @staticmethod
-    async def index_claim_building_inventories(building_id: int) -> None:
-        inventories = get_building_inventory(building_id)
+    # @staticmethod
+    # async def index_claim_building_inventories(building_id: int) -> None:
+        # inventories = get_building_inventory(building_id)
 
-        async with SessionLocal() as session:
-            for inventory in inventories:
-                inventory_orm = GameClaimBuildingInventoryOrm(
-                    building_id=building_id,
-                    building=await GameClaimBuildingOrm.get_by_building_id(building_id),
-                )
-                item_list = []
-                for item in inventory["pockets"]:
-                    inv_item_id = item[1][1][0]
-                    inv_item_count = item[1][1][1]
-                    item_orm = GameClaimInventoryItemOrm(
-                        inventory_id=inventory_orm.id,
-                        item_id=inv_item_id,
-                        amount=inv_item_count,
-                    )
-                    item_list.append(item_orm)
-                    session.add(item_orm)
-                inventory_orm.items = item_list
-                session.add(inventory_orm)
-            await session.commit()
+    #     async with SessionLocal() as session:
+    #         for inventory in inventories:
+    #             inventory_orm = GameClaimBuildingInventoryOrm(
+    #                 building_id=building_id,
+    #                 building=await GameClaimBuildingOrm.get_by_building_id(building_id),
+    #             )
+    #             item_list = []
+    #             for item in inventory["pockets"]:
+    #                 inv_item_id = item[1][1][0]
+    #                 inv_item_count = item[1][1][1]
+    #                 item_orm = GameClaimInventoryItemOrm(
+    #                     inventory_id=inventory_orm.id,
+    #                     item_id=inv_item_id,
+    #                     amount=inv_item_count,
+    #                 )
+    #                 item_list.append(item_orm)
+    #                 session.add(item_orm)
+    #             inventory_orm.items = item_list
+    #             session.add(inventory_orm)
+    #         await session.commit()
 
 
 class SearchResult:
