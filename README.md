@@ -12,6 +12,8 @@ Crafting planner for Bitcraft Online
 - Clean up TODO
 
 # Backlog Sorted
+- Bug report button that allows people to report bugs or feature requests related to the page that they're on
+- Changelog page - Can keep changelogs in MD in a specific folder so people can reference it
 - Buildings/Cargo are not loading
 - Proof of concept to pay for web service with Market Stall?
 - Provide filters for items (tiers, completed, future - filter by related skills of your character)
@@ -37,6 +39,8 @@ Crafting planner for Bitcraft Online
 - can people create their own groups that individuals can be invited to for LFW queues
 
 # Backlog Unsorted
+- Simple calculator on the item page that lets you set the number of items that you want to craft and shows the ingredients you need
+- Using a user's character to calculate craft time
 - Turn API errors into friendly user errors
 - Explorer for other JSON data in the game files?
 - Some sort of game TODO list - eg "reach 20 in this skill". Can resolve dependencies, so if you need to have a level in something before crafting an item, it can put both on the list
